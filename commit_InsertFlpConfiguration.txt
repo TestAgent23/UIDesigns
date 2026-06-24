@@ -9,12 +9,24 @@ string sourceFilePath = !string.IsNullOrWhiteSpace(fileLocation)
 
 GetFileLocation
 
- {
+ public static string GetFileLocation(FlpConfigurationResponseDto flpConfigurationRequestDto)
+        {
+            if ((int)SourceLocationTypeEnum.Azure == flpConfigurationRequestDto.LocationTypeId)
+                return flpConfigurationRequestDto.BlobClients.Name;
+
+            if ((int)SourceLocationTypeEnum.OnPrem == flpConfigurationRequestDto.LocationTypeId)
+                return flpConfigurationRequestDto.SourcePath;
+            #region SharePoint Workspace - AY
+            if ((int)SourceLocationTypeEnum.SharePoint == flpConfigurationRequestDto.LocationTypeId)
+            {
                 var sharePointFileUrl = flpConfigurationRequestDto.SharePointFileLocation?.FileUrl;
                 if (!string.IsNullOrWhiteSpace(sharePointFileUrl))
                     return sharePointFileUrl;
                 return flpConfigurationRequestDto.SourcePath ?? string.Empty;
             }
+            #endregion
+            return "";
+        }
 
 
 
