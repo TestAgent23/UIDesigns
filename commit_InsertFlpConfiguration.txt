@@ -1,124 +1,35 @@
-public async Task<APIResponse<FlpProcessResponseDto>> ProcessExcelFile(FlpRequestDto flpRequestDto)
-{
-    var configurationResult = await _fileLoadingProcessConfiguration.GetFlpProcessByConfigurationId(flpRequestDto.FlpConfigurationId,"");
-    if (configurationResult.ResponseCode == 200)
+ public async Task<FileStreamContent> GetFileContentAsync(Application credentials, string siteId, string driveId, string filePath, string? rangeHeader)
     {
-        var flpConfigurationRequestDto = configurationResult.Result;
-        DestinationStorageAccountDto destinationStorageAccountDto = null;
-        SharedLocationDestinationServerDto sharedLocationDestinationServerDto = null;
-        if ( flpConfigurationRequestDto.LocationTypeId == (int)SourceLocationTypeEnum.Azure)
-        {
+        var url = _graph.BuildUrl($"sites/{siteId}/drives/{driveId}/root:/{CommonUtilities.EncodeGraphPath(filePath)}:/content");
+        using var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await GetAccessTokenAsync(credentials).ConfigureAwait(false));
 
-            flpConfigurationRequestDto.BlobClients = flpRequestDto.BlobClients;
-            flpConfigurationRequestDto.UploadedFileId = flpRequestDto.BlobClients.UploadedId;
-            var blobClients = flpConfigurationRequestDto.BlobClients;
-            if (blobClients == null)
-            {
-                await _fileLoadingProcessConfiguration.UpdateFlpProcessStatus(flpConfigurationRequestDto.FlpConfigurationId, APIResultStatus.Error);
-                return await Task.FromResult(new APIResponse<FlpProcessResponseDto>
-                {
-                    ResultStatus = APIResultStatus.InvalidParameters,
-                    ResponseMessage = new List<string> { "Not found blob client details" },
-                    Result = null
-                });
-            }
-            var isValidFile1 = await _fileLoadingProcessConfiguration.IsValidFile(flpConfigurationRequestDto.FlpConfigurationId, blobClients.Name, ".xlsx");
-            var isValidFile2 = await _fileLoadingProcessConfiguration.IsValidFile(flpConfigurationRequestDto.FlpConfigurationId, blobClients.Name, ".xls");
-            if (!isValidFile1 && !isValidFile2)
-            {
-                await _fileLoadingProcessConfiguration.UpdateFlpProcessStatus(flpConfigurationRequestDto.FlpConfigurationId, APIResultStatus.Error);
-                return await Task.FromResult(new APIResponse<FlpProcessResponseDto>
-                {
-                    ResultStatus = APIResultStatus.InvalidParameters,
-                    ResponseMessage = new List<string> { "Invalid file extention" },
-                    Result = null
-                });
-            }
+        if (!string.IsNullOrWhiteSpace(rangeHeader))
+            request.Headers.TryAddWithoutValidation("Range", rangeHeader);
 
+        using var response = await _httpClientFactory.CreateClient().SendAsync(request, HttpCompletionOption.ResponseHeadersRead).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
 
+        var contentType = response.Content.Headers.ContentType?.ToString() ?? "application/octet-stream";
+        var contentLength = response.Content.Headers.ContentLength;
+        var statusCode = (int)response.StatusCode;
+        var contentRange = response.Content.Headers.ContentRange?.ToString();
+        var acceptRanges = response.Headers.AcceptRanges.Count > 0 ? string.Join(", ", response.Headers.AcceptRanges) : "bytes";
+        var fileName = CommonUtilities.ExtractFileNameFromPath(filePath);
 
-        }
-       
-        else if (flpConfigurationRequestDto.LocationTypeId == (int)SourceLocationTypeEnum.OnPrem)
-        {
-            flpConfigurationRequestDto.SourcePath = flpRequestDto.OnPremFileLocation.FileUrl;
-            flpConfigurationRequestDto.UploadedFileId = flpRequestDto.OnPremFileLocation.UploadedId;
+        await using var networkStream = await response.Content.ReadAsStreamAsync().ConfigureAwait(false);
+        var bufferedContent = new MemoryStream();
+        await networkStream.CopyToAsync(bufferedContent).ConfigureAwait(false);
+        bufferedContent.Position = 0;
 
-            var isValidFile1 = await _fileLoadingProcessConfiguration.IsValidFile(flpConfigurationRequestDto.FlpConfigurationId, flpConfigurationRequestDto.SourcePath, ".xlsx");
-            var isValidFile2 = await _fileLoadingProcessConfiguration.IsValidFile(flpConfigurationRequestDto.FlpConfigurationId, flpConfigurationRequestDto.SourcePath, ".xls");
-            if (!isValidFile1 && !isValidFile2)
-            {
-                await _fileLoadingProcessConfiguration.UpdateFlpProcessStatus(flpConfigurationRequestDto.FlpConfigurationId, APIResultStatus.Error);
-                return await Task.FromResult(new APIResponse<FlpProcessResponseDto>
-                {
-                    ResultStatus = APIResultStatus.InvalidParameters,
-                    ResponseMessage = new List<string> { "Invalid file extention" },
-                    Result = null
-                });
-            }
-        }
-        else if (flpConfigurationRequestDto.LocationTypeId == (int)SourceLocationTypeEnum.SharePoint)
+        return new FileStreamContent
         {
-            #region SharePoint Workspace - AY
-            flpConfigurationRequestDto.SourcePath = flpRequestDto.SharePointFileLocation.FileUrl;
-            flpConfigurationRequestDto.UploadedFileId = flpRequestDto.SharePointFileLocation.UploadedId;
-
-            var isValidFile1 = await _fileLoadingProcessConfiguration.IsValidFile(flpConfigurationRequestDto.FlpConfigurationId, flpConfigurationRequestDto.SourcePath, ".xlsx");
-            var isValidFile2 = await _fileLoadingProcessConfiguration.IsValidFile(flpConfigurationRequestDto.FlpConfigurationId, flpConfigurationRequestDto.SourcePath, ".xls");
-            if (!isValidFile1 && !isValidFile2)
-            {
-                await _fileLoadingProcessConfiguration.UpdateFlpProcessStatus(flpConfigurationRequestDto.FlpConfigurationId, APIResultStatus.Error);
-                return await Task.FromResult(new APIResponse<FlpProcessResponseDto>
-                {
-                    ResultStatus = APIResultStatus.InvalidParameters,
-                    ResponseMessage = new List<string> { "Invalid file extention" },
-                    Result = null
-                });
-            }
-            #endregion
-        }
-        if (flpConfigurationRequestDto.DestinationLocationTypeId == (int)DestinationLocationTypeEnum.Azure)
-        {
-            destinationStorageAccountDto = await _fileLoadingProcessConfiguration.DestinationstorageAccountInfo(flpConfigurationRequestDto.FlpConfigurationId);
-        }
-        else if (flpConfigurationRequestDto.DestinationLocationTypeId == (int)DestinationLocationTypeEnum.OnPrem)
-        {
-            sharedLocationDestinationServerDto = await _fileLoadingProcessConfiguration.SharedLocationDestinationServerDetails(flpConfigurationRequestDto.FlpConfigurationId);
-
-        }
-        var res = await ExcelProcess(flpConfigurationRequestDto, destinationStorageAccountDto, sharedLocationDestinationServerDto);
-        
-         await UpdateProcessStatus(flpConfigurationRequestDto, res);
-        if (!string.IsNullOrWhiteSpace(flpConfigurationRequestDto.UploadedFileId))
-        {
-           
-            int totalRows = res.Result?.TotalRows ?? 0;
-            int insertedRows = res.Result?.InsertedRows ?? 0;
-            int duplicateRows = res.Result?.DuplicateRows ?? 0;
-            string blobName = res.Result?.BlobName ?? string.Empty;
-            await _fileLoadingProcessConfiguration.AddBackUpFileDetails(flpConfigurationRequestDto.UploadedFileId, flpConfigurationRequestDto.FlpConfigurationId, res.Result?.BackUpFileName, null, totalRows, insertedRows, duplicateRows, blobName);
-        }
-        else
-        {
-            _logger.LogError($"Not updated backup file details for {flpConfigurationRequestDto.FlpConfigurationId}");
-        }
-        return await Task.FromResult(new APIResponse<FlpProcessResponseDto>
-        {
-            ResultStatus = res.ResultStatus,
-            ResponseMessage = res.ResponseMessage,
-            Result = res.Result
-        });
-
+            Content = bufferedContent,
+            ContentType = contentType,
+            ContentLength = contentLength ?? bufferedContent.Length,
+            StatusCode = statusCode,
+            ContentRange = contentRange,
+            AcceptRanges = acceptRanges,
+            FileName = fileName
+        };
     }
-    else
-    {
-        await _fileLoadingProcessConfiguration.UpdateFlpProcessStatus(flpRequestDto.FlpConfigurationId, APIResultStatus.Error);
-        return await Task.FromResult(new APIResponse<FlpProcessResponseDto>
-        {
-            ResultStatus = configurationResult.ResultStatus,
-            ResponseMessage = new List<string> { $"Not found records for {flpRequestDto.FlpConfigurationId}" },
-            Result = null
-        });
-    }
-}
-
