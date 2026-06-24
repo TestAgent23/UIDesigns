@@ -1,25 +1,9 @@
-try
-                    {
-                        (bool success, string uploadedId) = await UploadedFileDetails(flpConfigurationId, item.Name, processTypeId);
-                        if (success)
-                        {
-                            sharePointFiles.Add(new SharePointFileLocation
-                            {
-                                UploadedId = uploadedId,
-                                FileUrl = item.Path ?? item.WebUrl ?? item.Name,
-                                FileSize = item.Size
-                            });
-                        }
-                        else
-                        {
-                            _logger.LogWarning(
-                                "SharePoint file {FileName} found in {BrowsePath} but commit_fileUpload failed for {FlpConfigurationId}",
-                                item.Name, browsePath, flpConfigurationId);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex,
-                            "Failed to register SharePoint file {FileName} for {FlpConfigurationId}",
-                            item.Name, flpConfigurationId);
-                    }
+{
+  "flpConfigurationId": "F782404F-D85D-482F-A623-2C7451443CEE",
+  "processName": "DI_ALALLAL",
+  "sharePointFileLocation": {
+    "uploadedId": "7FECCB68-4CD3-45A1-B53A-E87F1F81ACDD",
+    "fileUrl": "Document-2/abcd.xlsx",
+    "fileSize": 41337
+  }
+}
