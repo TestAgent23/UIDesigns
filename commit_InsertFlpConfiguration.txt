@@ -415,5 +415,366 @@
 
                 _logger.LogError($"Error: File moving  failed to templorary storage for {flpConfigurationRequestDto.FlpConfigurationId}", ex.Message.ToString());
                 return (null, false);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ private static string ResolveSharePointProcessedFolderPath(string? sharePointFolderPath, string? sourceFilePath = null)
+        {
+            const string processedFolderName = "Processed";
+
+            var sourceFolder = sharePointFolderPath?.Trim().Trim('/');
+            if (string.IsNullOrWhiteSpace(sourceFolder) && !string.IsNullOrWhiteSpace(sourceFilePath))
+            {
+                var normalizedSource = sourceFilePath.Trim().Trim('/');
+                var lastSlash = normalizedSource.LastIndexOf('/');
+                if (lastSlash > 0)
+                    sourceFolder = normalizedSource[..lastSlash];
+            }
+
+            if (string.IsNullOrWhiteSpace(sourceFolder))
+                return processedFolderName;
+
+            return $"{sourceFolder}/{processedFolderName}";
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  public async Task<bool> MoveFileAsync(WorkspaceCredentials credentials, string sourceFilePath, string destinationFolderPath, string newFileName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourceFilePath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(destinationFolderPath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(newFileName);
+
+        var resolved = await ResolveCredentialsAsync(credentials).ConfigureAwait(false);
+        var (siteId, driveId) = await ResolveSiteAndDriveAsync(resolved, null).ConfigureAwait(false);
+
+        // 1. Get the file item by path to obtain its Graph item ID
+        var fileUrl = _graph.BuildUrl($"sites/{siteId}/drives/{driveId}/root:/{CommonUtilities.EncodeGraphPath(sourceFilePath.TrimStart('/'))}");
+        using var fileDoc = await SendGraphGetAsync(fileUrl, resolved).ConfigureAwait(false);
+        var fileItemId = CommonUtilities.JsonGetString(fileDoc.RootElement, "id")
+            ?? throw new InvalidOperationException($"Cannot find file item for path: {sourceFilePath}");
+
+        // 2. Ensure the destination folder exists (create nested path if needed), then get its item ID
+        var destFolderItemId = await EnsureFolderPathExistsAsync(resolved, siteId, driveId, destinationFolderPath).ConfigureAwait(false);
+
+        // 3.PATCH the file item to move it to the destination folder and rename it
+        var moveUrl = _graph.BuildUrl($"sites/{siteId}/drives/{driveId}/items/{fileItemId}");
+        var moveBody = new Dictionary<string, object>
+        {
+            ["parentReference"] = new { id = destFolderItemId },
+            ["name"] = newFileName
+        };
+
+        using var moveRequest = new HttpRequestMessage(HttpMethod.Patch, moveUrl);
+        moveRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await GetAccessTokenAsync(resolved).ConfigureAwait(false));
+            moveRequest.Content = new StringContent(
+            JsonSerializer.Serialize(moveBody),
+            System.Text.Encoding.UTF8,
+            "application/json");
+
+        using var moveResponse = await _httpClientFactory.CreateClient().SendAsync(moveRequest).ConfigureAwait(false);
+
+        if (!moveResponse.IsSuccessStatusCode)
+        {
+            var errorBody = await moveResponse.Content.ReadAsStringAsync().ConfigureAwait(false);
+            _logger.LogError("Graph API move file failed: {StatusCode} {Body}", (int)moveResponse.StatusCode, errorBody);
+            return false;
+        }
+
+        return true;
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    private async Task<string> EnsureFolderPathExistsAsync(Application credentials, string siteId, string driveId, string destinationFolderPath)
+    {
+        var normalizedPath = destinationFolderPath.Trim().Trim('/');
+        if (string.IsNullOrWhiteSpace(normalizedPath))
+            throw new ArgumentException("Destination folder path is required.", nameof(destinationFolderPath));
+
+        var segments = normalizedPath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        var currentPath = string.Empty;
+        string? currentFolderId = null;
+
+        foreach (var segment in segments)
+        {
+            currentPath = string.IsNullOrEmpty(currentPath) ? segment : $"{currentPath}/{segment}";
+
+            try
+            {
+                var folderUrl = _graph.BuildUrl($"sites/{siteId}/drives/{driveId}/root:/{CommonUtilities.EncodeGraphPath(currentPath)}");
+                using var folderDoc = await SendGraphGetAsync(folderUrl, credentials).ConfigureAwait(false);
+                currentFolderId = CommonUtilities.JsonGetString(folderDoc.RootElement, "id")
+                    ?? throw new InvalidOperationException($"Cannot read folder id for path: {currentPath}");
+            }
+            catch (HttpRequestException ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                _logger.LogInformation("Creating SharePoint folder '{FolderName}' under path '{ParentPath}'", segment, currentPath);
+                currentFolderId = await CreateFolderAsync(credentials, siteId, driveId, currentFolderId, segment).ConfigureAwait(false);
+            }
+        }
+
+        return currentFolderId ?? throw new InvalidOperationException($"Could not resolve destination folder: {destinationFolderPath}");
+    }
+
+    private async Task<string> CreateFolderAsync(Application credentials, string siteId, string driveId, string? parentFolderId, string folderName)
+    {
+        var createFolderUrl = string.IsNullOrEmpty(parentFolderId)
+            ? _graph.BuildUrl($"sites/{siteId}/drives/{driveId}/root/children")
+            : _graph.BuildUrl($"sites/{siteId}/drives/{driveId}/items/{parentFolderId}/children");
+
+        var createPayload = JsonSerializer.Serialize(new
+        {
+            name = folderName,
+            folder = new { },
+            @odata_type = "#microsoft.graph.driveItem"
+        });
+
+        using var createRequest = new HttpRequestMessage(HttpMethod.Post, createFolderUrl);
+        createRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", await GetAccessTokenAsync(credentials).ConfigureAwait(false));
+        createRequest.Content = new StringContent(createPayload, System.Text.Encoding.UTF8, "application/json");
+
+        using var createResponse = await _httpClientFactory.CreateClient().SendAsync(createRequest).ConfigureAwait(false);
+        if (!createResponse.IsSuccessStatusCode)
+        {
+            var errorBody = await createResponse.Content.ReadAsStringAsync().ConfigureAwait(false);
+            _logger.LogError("Graph API create folder failed: {StatusCode} {Body}", (int)createResponse.StatusCode, errorBody);
+            createResponse.EnsureSuccessStatusCode();
+        }
+
+        await using var createStream = await createResponse.Content.ReadAsStreamAsync().ConfigureAwait(false);
+        using var createDoc = await JsonDocument.ParseAsync(createStream).ConfigureAwait(false);
+        return CommonUtilities.JsonGetString(createDoc.RootElement, "id")
+            ?? throw new InvalidOperationException($"Created folder '{folderName}' but could not read its ID.");
+    }
             }
         }
