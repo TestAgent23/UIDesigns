@@ -1,134 +1,419 @@
-/*
-  PROD DEPLOY: dbo.sel_flpConfigurationList (DataIngestionV2)
-  SharePoint-only change — no scheduler, WHERE, or other JOIN logic modified.
+  public async Task<(FlpProcessTempFile?, bool)> MoveSourceFileToTemporaryDestinationAndDelete(long processId, string fileType, string fileLocation, string fileUploadedId, string backUpFileName, ConfigurationTableMappingDto configurationTableMappingDto, FlpConfigurationResponseDto flpConfigurationRequestDto, DestinationStorageAccountDto destinationStorageAccountDto, SharedLocationDestinationServerDto slDestinationServerDto)
+        {
+            FlpProcessTempFile flpProcessTempFile = new FlpProcessTempFile();
+            //source
+            //Adding Log
+            FlpActivityLogStatusEnum currentStatus = FlpActivityLogStatusEnum.ConversionToParqetFileMovedToParquetLocation;
+            CheckConnectivitySMBLibraryModel sourceServer = null;
+            try
+            {
+                currentStatus = FlpActivityLogStatusEnum.FileMovedToTempStorage;
+                
+                await AddFileProcessLosStatus(
+                        fileType: fileType,
+                        loginId: "",
+                        message: $"Moving File into temp folder from location: {fileLocation}",
+                        messageType: "info",
+                        processId: processId,
+                        processName: flpConfigurationRequestDto.ProcessName,
+                        tableName: configurationTableMappingDto.TableName,
+                        totalRows: 0,
+                        flpConfigurationId: flpConfigurationRequestDto.FlpConfigurationId,
+                        fileUploadedId: fileUploadedId,
+                        FileStatusActivityEnum.Processing,
+                        FlpActivityLogStatusEnum.FileMovedToTempStorage
+                    );
+                bool isCopiedFile = false;
+                BlobClient sourceBlobClient = null;
+                string sourceUrl = "";
+                string relativePath = "";
+                if (flpConfigurationRequestDto.LocationTypeId == (int)SourceLocationTypeEnum.Azure &&
+                    flpConfigurationRequestDto.DestinationLocationTypeId == (int)DestinationLocationTypeEnum.Azure)
+                {
+                    string sourceBlobUrl = flpConfigurationRequestDto.BlobClients.Uri;
+                    string sourceBlobName = flpConfigurationRequestDto.BlobClients.Name;
+                    string sourceBlobConnectionString = FlpConfigurationHelper.GetBlobConnectionString(flpConfigurationRequestDto.SourceStorageAccount, flpConfigurationRequestDto.SourceStorageAccountKey);
+                    string sourceBlobContainer = flpConfigurationRequestDto.SourceContainerName;
 
-  Changed (4 SELECT expressions + 1 LEFT JOIN):
-    - COALESCE main-table sharePoint* with di_flpSharePointSource (legacy rows keep main-table values)
-    - LEFT JOIN dbo.di_flpSharePointSource sp_src ON flpConfigurationId, active = 1
+                    sourceBlobClient = _iBlobStorageService.GetBlobClientDetails(flpConfigurationRequestDto.BlobClients.Name, sourceBlobConnectionString, sourceBlobContainer);
 
-  Verify after deploy:
-    SELECT CASE WHEN OBJECT_DEFINITION(OBJECT_ID('dbo.sel_flpConfigurationList'))
-      LIKE '%COALESCE(flp.sharePointApplicationId%' THEN 'OK' ELSE 'NOT DEPLOYED' END;
-    EXEC dbo.sel_flpConfigurationList @processTypeId = 6;
-*/
-SET ANSI_NULLS ON;
-GO
+                    //destination
+                    string destinationBlobConnectionString = FlpConfigurationHelper.GetBlobConnectionString(destinationStorageAccountDto.FlpStorageAccount, destinationStorageAccountDto.StorageAccountKey);
+                    string destinationContainerName = destinationStorageAccountDto.StorageContainerName;
+                    string destinationBlobUrl = $"{flpConfigurationRequestDto.DestinationPath}temp/"; //Moved file into temporary storage
+                    string destinationBlobName = $"{destinationBlobUrl}{backUpFileName}";// {sourceBlobClient.Name.Split('/').Last()}";
 
-SET QUOTED_IDENTIFIER ON;
-GO
+                    BlobClient destinationBlobClient = _iBlobStorageService.GetBlobClientDetails(destinationBlobName, destinationBlobConnectionString, destinationContainerName);
+                    (isCopiedFile, flpProcessTempFile) = await _iBlobStorageService.CopyFileSourceBlobToDestinationBlobAsync(sourceBlobClient, destinationBlobClient);
+                    flpProcessTempFile.AccountName = destinationStorageAccountDto.FlpStorageAccount;
+                    flpProcessTempFile.BlobContainerName = destinationStorageAccountDto.StorageContainerName;
+                    flpProcessTempFile.ParquetBlobConnectionString = destinationBlobConnectionString;
+                    // flpProcessTempFile.SourceBlobConnectionString = sourceBlobConnectionString;
+                    flpProcessTempFile.DestinationFolder = $"{flpConfigurationRequestDto.DestinationPath}parquet/";
+                }
+                else if (flpConfigurationRequestDto.LocationTypeId == (int)SourceLocationTypeEnum.Azure &&
+                   flpConfigurationRequestDto.DestinationLocationTypeId == (int)DestinationLocationTypeEnum.OnPrem)
+                {
+                    //File move from blob to onprem
+                    string sourceBlobUrl = flpConfigurationRequestDto.BlobClients.Uri;
+                    string sourceBlobName = flpConfigurationRequestDto.BlobClients.Name;
+                    string sourceBlobConnectionString = FlpConfigurationHelper.GetBlobConnectionString(flpConfigurationRequestDto.SourceStorageAccount, flpConfigurationRequestDto.SourceStorageAccountKey);
+                    string sourceBlobContainer = flpConfigurationRequestDto.SourceContainerName;
 
-CREATE OR ALTER PROCEDURE dbo.sel_flpConfigurationList    @processTypeId INT,
-    @fileProcessingServerTypeId INT = NULL
-AS
-BEGIN
-    SET NOCOUNT ON;
+                    sourceBlobClient = _iBlobStorageService.GetBlobClientDetails(flpConfigurationRequestDto.BlobClients.Name, sourceBlobConnectionString, sourceBlobContainer);
 
-    BEGIN TRY
-        SELECT
-            flp.id,
-            flp.process_name,
-            flp.flpConfigurationId,
-            flp.locationTypeId,
-            flp.destinationLocationTypeId,
-            flp.is_active,
-            flp.sourcePath,
-            flp.destinationPath,
-            flp.sender_communication_email,
-            flp.support_communication_email,
-            flp.loginid,
-            flp.processTypeId,
-            flp.securityGroupId,
-            sad.storageAccountName AS [sourceStorageAccount],
-            ssai.storageContainerName AS [sourceContainerName],
-            dbo.fn_decrypt(sad.storageAccountKey) AS [sourceStorageAccountKey],
-            dbo.fn_decrypt(sad.sasKey) AS [sasKey],
-            sad.sasKeyToken,
-            fsd.serverName,
-            slsi.sharedLocationServerInfoId AS [sharedLocationServerInfoId],
-            dbo.fn_decrypt(fsd.userName) AS [userName],
-            dbo.fn_decrypt(fsd.password) AS [password],
-            fsd.domain,
-            slsi.folderName,
-            dc.databaseConnectionSecret,
-            dc.databaseName,
-            flp.regionId,
-            flp.subRegionId,
-            flp.fileProcessingServerTypeId,
-            flp.clientId,
-            flp.search_string_in_file_name,
-            sc.scheduleStartDate,
-            sc.scheduleStartTime,
-            sc.scheduleEndDate,
-            sc.scheduleEndTime,
-            -- SharePoint-only: side table fallback (see header comment)
-            COALESCE(flp.sharePointApplicationId, sp_src.sharePointApplicationId) AS sharePointApplicationId,
-            COALESCE(flp.sharePointApplicationSiteId, sp_src.sharePointApplicationSiteId) AS sharePointApplicationSiteId,
-            COALESCE(flp.sharePointLibraryName, sp_src.sharePointLibraryName) AS sharePointLibraryName,
-            COALESCE(flp.sharePointFolderPath, sp_src.sharePointFolderPath, flp.sourcePath) AS sharePointFolderPath
-        FROM dbo.di_flpConfiguration flp
-        LEFT JOIN dbo.di_flpSourceStorageAccountInfo ssai
-            ON flp.flpConfigurationId = ssai.flpConfigurationId AND ssai.active = 1
-        LEFT JOIN dbo.di_info_storageAccountDetails sad
-            ON sad.storageAccountId = ssai.storageAccountId AND sad.active = 1
-        LEFT JOIN dbo.di_sharedLocationSourceServer slsi
-            ON flp.flpConfigurationId = slsi.flpConfigurationId AND slsi.active = 1
-        LEFT JOIN dbo.di_info_fileServerDetails fsd
-            ON fsd.fileServerId = slsi.fileServerId AND fsd.active = 1
-        LEFT JOIN dbo.di_configurationTableMapping ctm
-            ON flp.flpConfigurationId = ctm.flpConfigurationId AND ctm.active = 1
-        LEFT JOIN dbo.di_databaseConfiguration dc
-            ON ctm.databaseConfigurationId = dc.id AND dc.active = 1
-        INNER JOIN dbo.di_flpSchedulerConfiguration sc
-            ON flp.flpConfigurationId = sc.flpConfigurationId AND sc.active = 1
-        LEFT JOIN dbo.di_processScheduler ps
-            ON flp.flpConfigurationId = ps.flpConfigurationId AND ps.active = 1
-        -- SharePoint-only: side table (1:1 on flpConfigurationId — does not multiply rows)
-        LEFT JOIN dbo.di_flpSharePointSource sp_src
-            ON sp_src.flpConfigurationId = flp.flpConfigurationId AND sp_src.active = 1
-        WHERE flp.is_active = 1
-          AND flp.processTypeId = @processTypeId
-          AND (
-                (@fileProcessingServerTypeId IS NULL AND flp.fileProcessingServerTypeId IN (1, 2, 4))
-                OR (@fileProcessingServerTypeId IS NOT NULL AND flp.fileProcessingServerTypeId = 3)
-              )
-          AND (
-                (CAST(sc.scheduleEndDate AS DATETIME) + CAST(sc.scheduleEndTime AS DATETIME) >= GETUTCDATE())
-                OR sc.scheduleEndDate IS NULL
-              )
-          AND (
-                (sc.scheduleTypeId != 1 AND ps.nextRun <= GETUTCDATE())
-                OR (
-                    sc.scheduleTypeId = 1
-                    AND (CAST(sc.scheduleStartDate AS DATETIME) + CAST(sc.scheduleStartTime AS DATETIME) <= GETUTCDATE())
-                )
-              );
-    END TRY
-    BEGIN CATCH
-        SELECT 'Error' AS [Result], 'Oops! Something unexpected occurred.' AS [Message];
+                    //destination
+                    string currentTimeString = DateTime.Now.ToString("yyyyMMdd");
+                    string onPremFilePath = flpConfigurationRequestDto.DestinationPath;
+                    string destinationUrl = @$"{flpConfigurationRequestDto.DestinationPath}temp\{currentTimeString}";
+                    string tempFilePath = Path.Combine(destinationUrl, backUpFileName);
+                     (isCopiedFile, flpProcessTempFile) = FlpConfigurationHelper.CopyFileBlobToOnPremAsync(tempFilePath, flpConfigurationRequestDto.FlpConfigurationId, sourceBlobClient, slDestinationServerDto,_iISMBLibraryServices);
+                    var onPremLocation = true;// Convert.ToBoolean(KeyVault.GetKeyVaultValue("OnPremLocation").Result);
+                    if (onPremLocation)
+                    {
+                        (isCopiedFile, flpProcessTempFile) = FlpConfigurationHelper.CopyFileBlobToOnPremAsync(tempFilePath, flpConfigurationRequestDto.FlpConfigurationId, sourceBlobClient, slDestinationServerDto,_iISMBLibraryServices);
+                    }
+                    else
+                    {
+                        (isCopiedFile, flpProcessTempFile) = await _iBlobStorageService.CopyFileBlobToOnPremAsync(tempFilePath, sourceBlobClient);
+                    }
 
-        IF OBJECT_ID(N'dbo.NLog', N'U') IS NOT NULL
-        BEGIN
-            INSERT INTO dbo.NLog (
-                MachineName, Logged, Level, Message, Logger, Properties, Callsite, Exception
-            )
-            VALUES (
-                @@SERVERNAME,
-                GETUTCDATE(),
-                'Error',
-                ERROR_MESSAGE(),
-                'sel_flpConfigurationList',
-                '',
-                '',
-                CONCAT(
-                    'Error Number: ', ERROR_NUMBER(),
-                    ', Error Severity: ', ERROR_SEVERITY(),
-                    ', Error State: ', ERROR_STATE(),
-                    ', Error Procedure: ', ERROR_PROCEDURE(),
-                    ', Error Line: ', ERROR_LINE(),
-                    ', Error Message: ', ERROR_MESSAGE()
-                )
-            );
-        END
-    END CATCH
-END;
-GO
+                    flpProcessTempFile.DestinationFolder = @$"{flpConfigurationRequestDto.DestinationPath}\parquet\";
+                    //flpProcessTempFile.sourceTempFilePath = $"{destinationUrl}";
+
+                }
+                else if (flpConfigurationRequestDto.LocationTypeId == (int)SourceLocationTypeEnum.OnPrem &&
+                  flpConfigurationRequestDto.DestinationLocationTypeId == (int)DestinationLocationTypeEnum.OnPrem)
+                {
+                    sourceUrl = $"{flpConfigurationRequestDto.SourcePath}";
+                    string destinationUrl = @$"{flpConfigurationRequestDto.DestinationPath}temp\"; //Moved file into temporary storage
+                   // var dataIngestionOnPremDomainName = Convert.ToString(Environment.GetEnvironmentVariable("DataIngestionOnPremDomainName"));
+                    sourceServer = new CheckConnectivitySMBLibraryModel();
+                    sourceServer.serverIP = flpConfigurationRequestDto.SourceServerName;
+                    sourceServer.username = flpConfigurationRequestDto.SourceUserName;
+                    sourceServer.password = flpConfigurationRequestDto.SourcePassword;
+                    sourceServer.sharedFolderName = flpConfigurationRequestDto.SourceAppFolder;
+                    sourceServer.domain = flpConfigurationRequestDto.SourceDomain;
+
+                    string tempFilePath = Path.Combine(sourceServer.serverIP, sourceServer.sharedFolderName);
+                    // To get the relative path from the app folder
+                    relativePath = sourceUrl.Substring(tempFilePath.Length).TrimStart(Path.DirectorySeparatorChar);
+
+                    (isCopiedFile, string response) = await FlpConfigurationHelper.CopySourceOnPremFileToDestinationOnPrem(flpConfigurationRequestDto.FlpConfigurationId, relativePath, destinationUrl, backUpFileName, sourceServer, slDestinationServerDto, _iISMBLibraryServices);
+                    if (isCopiedFile)
+                    {
+                        flpProcessTempFile.DestinationFolder = @$"{flpConfigurationRequestDto.DestinationPath}";
+                        flpProcessTempFile.sourceTempFilePath = $"{response}";
+                    }
+
+                }
+                else if (flpConfigurationRequestDto.LocationTypeId == (int)SourceLocationTypeEnum.OnPrem &&
+                    flpConfigurationRequestDto.DestinationLocationTypeId == (int)DestinationLocationTypeEnum.Azure)
+                {
+                    //OnPrem to azure
+                    string currentTimeString = DateTime.Now.ToString("yyyyMMdd");
+                    sourceUrl = $"{flpConfigurationRequestDto.SourcePath}";
+                    //destination
+                    string destinationBlobConnectionString = FlpConfigurationHelper.GetBlobConnectionString(destinationStorageAccountDto.FlpStorageAccount, destinationStorageAccountDto.StorageAccountKey);
+                    string destinationContainerName = destinationStorageAccountDto.StorageContainerName;
+                    string destinationBlobUrl = $"{flpConfigurationRequestDto.DestinationPath}temp/{currentTimeString}/";
+                    string destinationBlobName = $"{destinationBlobUrl}{backUpFileName}";
+
+                    BlobClient destinationBlobClient = _iBlobStorageService.GetBlobClientDetails(destinationBlobName, destinationBlobConnectionString, destinationContainerName);
+
+                    var onPremLocation = true;// Convert.ToBoolean(KeyVault.GetKeyVaultValue("OnPremLocation").Result);
+                    if (onPremLocation)
+                    {
+                        string tempFilePath = Path.Combine(flpConfigurationRequestDto.SourceServerName, flpConfigurationRequestDto.SourceAppFolder);
+                        // To get the relative path from the app folder
+                        relativePath = sourceUrl.Substring(tempFilePath.Length).TrimStart(Path.DirectorySeparatorChar);
+                       // var dataIngestionOnPremDomainName = Convert.ToString(Environment.GetEnvironmentVariable("DataIngestionOnPremDomainName"));
+                        sourceServer = new CheckConnectivitySMBLibraryModel();
+                        sourceServer.serverIP = flpConfigurationRequestDto.SourceServerName;
+                        sourceServer.username = flpConfigurationRequestDto.SourceUserName;
+                        sourceServer.password = flpConfigurationRequestDto.SourcePassword;
+                        sourceServer.sharedFolderName = flpConfigurationRequestDto.SourceAppFolder;
+                        sourceServer.sourceFilePath = relativePath;
+                        sourceServer.domain = flpConfigurationRequestDto.SourceDomain;
+
+                        (isCopiedFile, flpProcessTempFile) = await FlpConfigurationHelper.CopyFileOnPremToDestinationBlobAsync(sourceUrl, flpConfigurationRequestDto.FlpConfigurationId, destinationBlobClient, sourceServer, _iISMBLibraryServices);
+                    }
+                    else
+                    {
+                        (isCopiedFile, flpProcessTempFile) = await new BlobStorageService().CopyFileOnPremToDestinationBlobAsync(sourceUrl, destinationBlobClient);//sourceBlobClient, destinationBlobClient);
+                    }
+
+                    flpProcessTempFile.AccountName = destinationStorageAccountDto.FlpStorageAccount;
+                    flpProcessTempFile.BlobContainerName = destinationStorageAccountDto.StorageContainerName;
+                    flpProcessTempFile.ParquetBlobConnectionString = destinationBlobConnectionString;
+                    // flpProcessTempFile.SourceBlobConnectionString = sourceBlobConnectionString;
+                    flpProcessTempFile.DestinationFolder = @$"{flpConfigurationRequestDto.DestinationPath}/parquet/";
+                }
+                else if (flpConfigurationRequestDto.LocationTypeId == (int)SourceLocationTypeEnum.SharePoint &&
+                    flpConfigurationRequestDto.DestinationLocationTypeId == (int)DestinationLocationTypeEnum.Azure)
+                {
+                    #region SharePoint Workspace - AY
+                    var fileContent = await FetchSharePointFileAsync(flpConfigurationRequestDto);
+                    if (fileContent == null)
+                        return (null, false);
+
+                    string destinationBlobConnectionString = FlpConfigurationHelper.GetBlobConnectionString(
+                        destinationStorageAccountDto.FlpStorageAccount, destinationStorageAccountDto.StorageAccountKey);
+                    string destinationContainerName = destinationStorageAccountDto.StorageContainerName;
+                    string destinationBlobUrl = $"{flpConfigurationRequestDto.DestinationPath}temp/";
+                    string destinationBlobName = $"{destinationBlobUrl}{backUpFileName}";
+
+                    BlobClient destinationBlobClient = _iBlobStorageService.GetBlobClientDetails(
+                        destinationBlobName, destinationBlobConnectionString, destinationContainerName);
+
+                    await destinationBlobClient.UploadAsync(fileContent.Content, overwrite: true);
+
+                    isCopiedFile = true;
+                    flpProcessTempFile.AccountName = destinationStorageAccountDto.FlpStorageAccount;
+                    flpProcessTempFile.BlobContainerName = destinationStorageAccountDto.StorageContainerName;
+                    flpProcessTempFile.ParquetBlobConnectionString = destinationBlobConnectionString;
+                    flpProcessTempFile.DestinationFolder = $"{flpConfigurationRequestDto.DestinationPath}parquet/";
+                    #endregion
+                }
+                else if (flpConfigurationRequestDto.LocationTypeId == (int)SourceLocationTypeEnum.SharePoint &&
+                    flpConfigurationRequestDto.DestinationLocationTypeId == (int)DestinationLocationTypeEnum.OnPrem)
+                {
+                    #region SharePoint Workspace - AY
+                    var fileContent = await FetchSharePointFileAsync(flpConfigurationRequestDto);
+                    if (fileContent == null)
+                        return (null, false);
+
+                    string currentTimeString = DateTime.Now.ToString("yyyyMMdd");
+                    string destinationUrl = @$"{flpConfigurationRequestDto.DestinationPath}temp\{currentTimeString}";
+                    string tempFilePath = Path.Combine(destinationUrl, backUpFileName);
+                    Directory.CreateDirectory(Path.GetDirectoryName(tempFilePath));
+                    using (var fileStream = File.Create(tempFilePath))
+                    {
+                        await fileContent.Content.CopyToAsync(fileStream);
+                    }
+
+                    isCopiedFile = true;
+                    flpProcessTempFile.DestinationFolder = @$"{flpConfigurationRequestDto.DestinationPath}\parquet\";
+                    #endregion
+                }
+
+                //(flpProcessTempFile, BlobClient sourceBlobClient) = await new BlobStorageService().MovedFileToTempAsync(sourceBlobUrl, sourceBlobName, sourceBlobConnectionString, sourceBlobContainer, destinationBlobConnectionString, destinationContainerName, destinationBlobUrl);
+                if (isCopiedFile && flpProcessTempFile != null)
+                {
+
+                    await AddFileProcessLosStatus(
+                            fileType: fileType,
+                            loginId: "",
+                            message: $"Moved File into destination temp folder from location {fileLocation}",
+                            messageType: "info",
+                            processId: processId,
+                            processName: flpConfigurationRequestDto.ProcessName,
+                            tableName: configurationTableMappingDto.TableName,
+                            totalRows: 0,
+                            flpConfigurationId: flpConfigurationRequestDto.FlpConfigurationId,
+                            fileUploadedId: fileUploadedId,
+                            FileStatusActivityEnum.ProcessCompleted,
+                            FlpActivityLogStatusEnum.FileMovedToTempStorage
+                        );
+
+                    if (flpProcessTempFile != null)
+                    {
+                        currentStatus = FlpActivityLogStatusEnum.DeletedFileFromMainLocation;
+       
+
+                        await AddFileProcessLosStatus(
+                                 fileType: fileType,
+                                 loginId: "",
+                                 message: $"started deleting from location:{fileLocation}",
+                                 messageType: "info",
+                                 processId: processId,
+                                 processName: flpConfigurationRequestDto.ProcessName,
+                                 tableName: configurationTableMappingDto.TableName,
+                                 totalRows: 0,
+                                 flpConfigurationId: flpConfigurationRequestDto.FlpConfigurationId,
+                                 fileUploadedId: fileUploadedId,
+                                 FileStatusActivityEnum.Processing,
+                                 FlpActivityLogStatusEnum.DeletedFileFromMainLocation
+                             );
+
+
+                        var isDeleted = false;
+                        string responseMsg = "";
+
+                        if (flpConfigurationRequestDto.LocationTypeId == (int)SourceLocationTypeEnum.Azure)
+                        {
+                            isDeleted = await _iBlobStorageService.DeleteBlobAsync(sourceBlobClient);
+                        }
+                        else if (flpConfigurationRequestDto.LocationTypeId == (int)SourceLocationTypeEnum.OnPrem)
+                        {
+                            var onPremLocation = true;// Convert.ToBoolean(KeyVault.GetKeyVaultValue("OnPremLocation").Result);
+                            if (onPremLocation)
+                            {
+                                sourceServer.sourceFilePath = relativePath;
+                                var result = _iISMBLibraryServices.SMBRequest(sourceServer, flpConfigurationRequestDto.FlpConfigurationId, SMBRequestEnum.DeleteFile);
+                                if (result.FileIsDeleted)
+                                {
+                                    isDeleted = true;
+                                    responseMsg = "DeletedFile";
+                                }
+                                else
+                                {
+                                    isDeleted = false;
+                                    responseMsg = "something went wrong";
+                                }
+                            }
+                            else
+                            {
+                                (isDeleted, responseMsg) = await FlpConfigurationHelper.DeleteFile(sourceUrl);
+                            }
+
+                        }
+                        else if (flpConfigurationRequestDto.LocationTypeId == (int)SourceLocationTypeEnum.SharePoint)
+                        {
+                            #region SharePoint Workspace - AY
+                            string processedFolderPath = ResolveSharePointProcessedFolderPath(
+                                flpConfigurationRequestDto.SharePointFolderPath, fileLocation);
+                            _logger.LogInformation(
+                                "Moving SharePoint file to {ProcessedFolderPath} for {FlpConfigurationId}, file {FileLocation}",
+                                processedFolderPath, flpConfigurationRequestDto.FlpConfigurationId, fileLocation);
+
+                            try
+                            {
+                                if (!flpConfigurationRequestDto.SharePointApplicationId.HasValue
+                                    || flpConfigurationRequestDto.SharePointApplicationId.Value == Guid.Empty)
+                                {
+                                    isDeleted = false;
+                                    responseMsg = "SharePointApplicationIdMissing";
+                                    _logger.LogError(
+                                        "SharePoint ApplicationId is missing for {FlpConfigurationId}; cannot move file {FileLocation}",
+                                        flpConfigurationRequestDto.FlpConfigurationId, fileLocation);
+                                }
+                                else
+                                {
+                                var sharePointCredentials = new WorkspaceCredentials
+                                {
+                                    ApplicationId = flpConfigurationRequestDto.SharePointApplicationId.Value,
+                                    LibraryName = flpConfigurationRequestDto.SharePointLibraryName
+                                };
+
+                                string sourceFilePath = fileLocation;
+                                string timeStamp = DateTime.UtcNow.ToString("yyyyMMdd_HHmmss");
+                                string originalFileName = Path.GetFileNameWithoutExtension(sourceFilePath);
+                                string extension = Path.GetExtension(sourceFilePath);
+                                string newFileName = $"{originalFileName}_{timeStamp}{extension}";
+
+                                var moveSuccess = await _sharePointPluginService.MoveFileAsync(
+                                    sharePointCredentials,
+                                    sourceFilePath,
+                                    processedFolderPath,
+                                    newFileName);
+
+                                if (moveSuccess)
+                                {
+                                    isDeleted = true;
+                                    responseMsg = $"MovedToProcessed:{processedFolderPath}/{newFileName}";
+                                    _logger.LogInformation("Successfully moved SharePoint file to {Destination} for {FlpConfigurationId}",
+                                        $"{processedFolderPath}/{newFileName}", flpConfigurationRequestDto.FlpConfigurationId);
+                                }
+                                else
+                                {
+                                    isDeleted = false;
+                                    responseMsg = "MoveToProcessedFailed";
+                                    _logger.LogError(
+                                        "Failed to move SharePoint file to {ProcessedFolderPath} for {FlpConfigurationId}",
+                                        processedFolderPath, flpConfigurationRequestDto.FlpConfigurationId);
+                                }
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                isDeleted = false;
+                                responseMsg = "MoveToProcessedError";
+                                _logger.LogError(ex, "Error moving SharePoint file to Processed folder for {FlpConfigurationId}", flpConfigurationRequestDto.FlpConfigurationId);
+                            }
+                            #endregion
+                        }
+
+                        if (isDeleted)
+                        {
+                            await AddFileProcessLosStatus(
+                                   fileType: fileType,
+                                   loginId: "",
+                                   message: $"deleted from location:{fileLocation}",
+                                   messageType: "info",
+                                   processId: processId,
+                                   processName: flpConfigurationRequestDto.ProcessName,
+                                   tableName: configurationTableMappingDto.TableName,
+                                   totalRows: 0,
+                                   flpConfigurationId: flpConfigurationRequestDto.FlpConfigurationId,
+                                   fileUploadedId: fileUploadedId,
+                                   FileStatusActivityEnum.ProcessCompleted,
+                                   FlpActivityLogStatusEnum.DeletedFileFromMainLocation
+                               );
+
+                        }
+                        else
+                        {
+                            await AddFileProcessLosStatus(
+                                    fileType: fileType,
+                                    loginId: "",
+                                    message: $"Error: Not deleted from location:{fileLocation}",
+                                    messageType: "error",
+                                    processId: processId,
+                                    processName: flpConfigurationRequestDto.ProcessName,
+                                    tableName: configurationTableMappingDto.TableName,
+                                    totalRows: 0,
+                                    flpConfigurationId: flpConfigurationRequestDto.FlpConfigurationId,
+                                    fileUploadedId: fileUploadedId,
+                                    FileStatusActivityEnum.Error,
+                                    FlpActivityLogStatusEnum.DeletedFileFromMainLocation
+                                );
+                            _logger.LogError($"Error: Not deleted from location:{fileLocation}", $"{responseMsg}");
+                            return (flpProcessTempFile, false);
+
+                        }
+
+
+                    }
+                }
+                else
+                {
+                    await AddFileProcessLosStatus(
+                    fileType: fileType,
+                    loginId: "",
+                    message: $"Error: File moving  failed to templorary storage",
+                    messageType: "error",
+                    processId: processId,
+                    processName: flpConfigurationRequestDto.ProcessName,
+                    tableName: configurationTableMappingDto.TableName,
+                    totalRows: 0,
+                    flpConfigurationId: flpConfigurationRequestDto.FlpConfigurationId,
+                    fileUploadedId: fileUploadedId,
+                    FileStatusActivityEnum.Error,
+                    FlpActivityLogStatusEnum.FileMovedToTempStorage);
+                    _logger.LogError($"Error: File moving  failed to templorary storage for {flpConfigurationRequestDto.FlpConfigurationId}", "flpProcessTempFile is null");
+                    return (null, false);
+                }
+                return (flpProcessTempFile, true);
+            }
+            catch (Exception ex)
+            {
+                await AddFileProcessLosStatus(
+                                    fileType: fileType,
+                                    loginId: "",
+                                    message: $"Error: File moving  failed to templorary storage",
+                                    messageType: "error",
+                                    processId: processId,
+                                    processName: flpConfigurationRequestDto.ProcessName,
+                                    tableName: configurationTableMappingDto.TableName,
+                                    totalRows: 0,
+                                    flpConfigurationId: flpConfigurationRequestDto.FlpConfigurationId,
+                                    fileUploadedId: fileUploadedId,
+                                    FileStatusActivityEnum.Error,
+                                    currentStatus
+                                );
+
+                _logger.LogError($"Error: File moving  failed to templorary storage for {flpConfigurationRequestDto.FlpConfigurationId}", ex.Message.ToString());
+                return (null, false);
+            }
+        }
