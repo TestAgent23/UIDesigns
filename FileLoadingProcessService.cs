@@ -1,857 +1,365 @@
-﻿using AngleSharp.Io;
-using Azure;
-using Azure.Storage.Blobs;
-using DocumentFormat.OpenXml.Office2010.ExcelAc;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Teleperformance.DataIngestion.Common;
-using Teleperformance.DataIngestion.DataAccess.Helpers;
-using Teleperformance.DataIngestion.DataAccess.Interfaces.v1._0;
-using Teleperformance.DataIngestion.DataAccess.Repository.v1._0;
-using Teleperformance.DataIngestion.Models.DTOs.v1._0.FileLoadingConfigurationProcess;
-using Teleperformance.DataIngestion.Models.DTOs.v1._0.FileLoadingProcess;
-using Teleperformance.DataIngestion.Models.Entities.v1._0;
-using Teleperformance.DataIngestion.Models.Entities.v1._0.FileLoadingConfigurationProcess;
-using Teleperformance.DataIngestion.Models.Enums.v1._0;
-using Teleperformance.DataIngestion.Models.Models.v1._0;
-using static System.Net.WebRequestMethods;
-
-namespace Teleperformance.DataIngestion.DataAccess.Services.v1._0
-{
-    public class FileLoadingProcessService : IFileLoadingProcessService
-    {
-      
-        private readonly ILogger<FileLoadingProcessService> _logger;
-        private readonly IFileLoadingProcessConfiguration _fileLoadingProcessConfiguration;
-        private readonly IFileLoadingProcessRepository _ifileLoadingProcessRepository;
-        private readonly IFileProcessingService _iIFileProcessingService;
-        private readonly ICsvToParquetConverterService _iCsvToParquetConverterService;
-        private readonly ITxtToParquetConverterService _iTxtToParquetConverterService;
-        private readonly IExcelToParquetConverterService _iExcelToParquetConverterService;
-        
-
-        public FileLoadingProcessService(ILogger<FileLoadingProcessService> logger, IFileLoadingProcessConfiguration fileLoadingProcessConfiguration, ICsvToParquetConverterService iCsvToParquetConverterService,IFileLoadingProcessRepository ifileLoadingProcessRepository, IFileProcessingService iIFileProcessingService, ITxtToParquetConverterService iTxtToParquetConverterService, IExcelToParquetConverterService iExcelToParquetConverterService)
-        {
-            _logger = logger;
-            _fileLoadingProcessConfiguration = fileLoadingProcessConfiguration;
-            _iCsvToParquetConverterService = iCsvToParquetConverterService;
-            _ifileLoadingProcessRepository = ifileLoadingProcessRepository;
-            _iIFileProcessingService = iIFileProcessingService;
-            _iTxtToParquetConverterService = iTxtToParquetConverterService;
-            _iExcelToParquetConverterService = iExcelToParquetConverterService;
-        }
-
-
-
-        public async Task<APIResponse<FlpProcessResponseDto>> ProcessCsvFile(FlpRequestDto flpRequestDto)
-        {
-            var configurationResult = await _fileLoadingProcessConfiguration.GetFlpProcessByConfigurationId(flpRequestDto.FlpConfigurationId,"");
-            if (configurationResult.ResponseCode == 200)
-            {
-                var flpConfigurationRequestDto = configurationResult.Result;
-                DestinationStorageAccountDto destinationStorageAccountDto = null;
-                SharedLocationDestinationServerDto sharedLocationDestinationServerDto = null;
-                if (flpConfigurationRequestDto.LocationTypeId == (int)SourceLocationTypeEnum.Azure)
-                {
-
-                    flpConfigurationRequestDto.BlobClients = flpRequestDto.BlobClients;
-                    flpConfigurationRequestDto.UploadedFileId = flpRequestDto.BlobClients.UploadedId;
-                    var blobClients = flpConfigurationRequestDto.BlobClients;
-                    if (blobClients == null)
-                    {
-                        await _fileLoadingProcessConfiguration.UpdateFlpProcessStatus(flpConfigurationRequestDto.FlpConfigurationId, APIResultStatus.Error);
-                        return await Task.FromResult(new APIResponse<FlpProcessResponseDto>
-                        {
-                            ResultStatus = APIResultStatus.InvalidParameters,
-                            ResponseMessage = new List<string> { "Not found blob client details" },
-                            Result = null
-                        });
-                    }
-                    var isValidFile = await _fileLoadingProcessConfiguration.IsValidFile(flpConfigurationRequestDto.FlpConfigurationId, blobClients.Name, ".csv");
-                    if (!isValidFile)
-                    {
-                        await _fileLoadingProcessConfiguration.UpdateFlpProcessStatus(flpConfigurationRequestDto.FlpConfigurationId, APIResultStatus.Error);
-                        return await Task.FromResult(new APIResponse<FlpProcessResponseDto>
-                        {
-                            ResultStatus = APIResultStatus.InvalidParameters,
-                            ResponseMessage = new List<string> { "Invalid file extention" },
-                            Result = null
-                        });
-                    }
-
-                }                
-                else if (flpConfigurationRequestDto.LocationTypeId == (int)SourceLocationTypeEnum.OnPrem)
-                {
-                    flpConfigurationRequestDto.SourcePath = flpRequestDto.OnPremFileLocation.FileUrl;
-                    flpConfigurationRequestDto.UploadedFileId = flpRequestDto.OnPremFileLocation.UploadedId;
-
-                    var isValidFile = await _fileLoadingProcessConfiguration.IsValidFile(flpConfigurationRequestDto.FlpConfigurationId, flpConfigurationRequestDto.SourcePath, ".csv");
-                    if (!isValidFile)
-                    {
-                        await _fileLoadingProcessConfiguration.UpdateFlpProcessStatus(flpConfigurationRequestDto.FlpConfigurationId, APIResultStatus.Error);
-                        return await Task.FromResult(new APIResponse<FlpProcessResponseDto>
-                        {
-                            ResultStatus = APIResultStatus.InvalidParameters,
-                            ResponseMessage = new List<string> { "Invalid file extention" },
-                            Result = null
-                        });
-                    }
-                }
-                if (flpConfigurationRequestDto.DestinationLocationTypeId == (int)DestinationLocationTypeEnum.Azure)
-                {
-                    destinationStorageAccountDto = await _fileLoadingProcessConfiguration.DestinationstorageAccountInfo(flpConfigurationRequestDto.FlpConfigurationId);
-                }
-                else if (flpConfigurationRequestDto.DestinationLocationTypeId == (int)DestinationLocationTypeEnum.OnPrem)
-                {
-                    sharedLocationDestinationServerDto = await _fileLoadingProcessConfiguration.SharedLocationDestinationServerDetails(flpConfigurationRequestDto.FlpConfigurationId);
-
-                }
-
-                var res = await CsvProcess(flpConfigurationRequestDto, destinationStorageAccountDto, sharedLocationDestinationServerDto);
-                await UpdateProcessStatus(flpConfigurationRequestDto, res);
-
-                if (!string.IsNullOrWhiteSpace(flpConfigurationRequestDto.UploadedFileId))
-                {
-                    int totalRows = res.Result?.TotalRows ?? 0;
-                    int insertedRows = res.Result?.InsertedRows ?? 0;
-                    int duplicateRows = res.Result?.DuplicateRows ?? 0;
-                    string blobName = res.Result?.BlobName?? string.Empty;
-                    
-                    await _fileLoadingProcessConfiguration.AddBackUpFileDetails(flpConfigurationRequestDto.UploadedFileId, flpConfigurationRequestDto.FlpConfigurationId, res.Result?.BackUpFileName, null, totalRows, insertedRows, duplicateRows,blobName);
-                }
-                else
-                {
-                    _logger.LogError($"Not updated backup file details for {flpConfigurationRequestDto.FlpConfigurationId}");
-                }
-                return await Task.FromResult(new APIResponse<FlpProcessResponseDto>
-                {
-                    ResultStatus = res.ResultStatus,
-                    ResponseMessage = res.ResponseMessage,
-                    Result = res.Result
-                });
-
-            }
-            else
-            {
-                await _fileLoadingProcessConfiguration.UpdateFlpProcessStatus(flpRequestDto.FlpConfigurationId, APIResultStatus.Error);
-                return await Task.FromResult(new APIResponse<FlpProcessResponseDto>
-                {
-                    ResultStatus = configurationResult.ResultStatus,
-                    ResponseMessage = new List<string> { $"Not found records for {flpRequestDto.FlpConfigurationId}" },
-                    Result = null
-                });
-            }
-        }
-
-
-       
-        public async Task<APIResponse<FlpProcessResponseDto>> ProcessTxtFile(FlpRequestDto flpRequestDto)
-        {
-          
-            var configurationResult = await _fileLoadingProcessConfiguration.GetFlpProcessByConfigurationId(flpRequestDto.FlpConfigurationId,"");
-          
-            if (configurationResult.ResponseCode == 200)
-            {
-               
-                var flpConfigurationRequestDto = configurationResult.Result;
-                DestinationStorageAccountDto destinationStorageAccountDto = null;
-                SharedLocationDestinationServerDto sharedLocationDestinationServerDto = null;
-                if (flpConfigurationRequestDto.LocationTypeId == (int)SourceLocationTypeEnum.Azure)
-                {
-
-                    flpConfigurationRequestDto.BlobClients = flpRequestDto.BlobClients;
-                    flpConfigurationRequestDto.UploadedFileId = flpRequestDto.BlobClients.UploadedId;
-                    var blobClients = flpConfigurationRequestDto.BlobClients;
-                    if (blobClients == null)
-                    {
-                       
-                        await _fileLoadingProcessConfiguration.UpdateFlpProcessStatus(flpConfigurationRequestDto.FlpConfigurationId, APIResultStatus.Error);
-                        return await Task.FromResult(new APIResponse<FlpProcessResponseDto>
-                        {
-                            ResultStatus = APIResultStatus.InvalidParameters,
-                            ResponseMessage = new List<string> { "Not found blob client details" },
-                            Result = null
-                        });
-                    }
-                   
-                    var isValidFile = await _fileLoadingProcessConfiguration.IsValidFile(flpConfigurationRequestDto.FlpConfigurationId, blobClients.Name, ".txt");
-                   
-                    if (!isValidFile)
-                    {
-
-                        await _fileLoadingProcessConfiguration.UpdateFlpProcessStatus(flpConfigurationRequestDto.FlpConfigurationId, APIResultStatus.Error);
-                        return await Task.FromResult(new APIResponse<FlpProcessResponseDto>
-                        {
-                            ResultStatus = APIResultStatus.InvalidParameters,
-                            ResponseMessage = new List<string> { "Invalid file extention" },
-                            Result = null
-                        });
-                    }
-
-                }                
-                else if (flpConfigurationRequestDto.LocationTypeId == (int)SourceLocationTypeEnum.OnPrem)
-                {
-                    flpConfigurationRequestDto.SourcePath = flpRequestDto.OnPremFileLocation.FileUrl;
-                    flpConfigurationRequestDto.UploadedFileId = flpRequestDto.OnPremFileLocation.UploadedId;
-
-                    var isValidFile = await _fileLoadingProcessConfiguration.IsValidFile(flpConfigurationRequestDto.FlpConfigurationId, flpConfigurationRequestDto.SourcePath, ".txt");
-                    if (!isValidFile)
-                    {
-                        await _fileLoadingProcessConfiguration.UpdateFlpProcessStatus(flpConfigurationRequestDto.FlpConfigurationId, APIResultStatus.Error);
-                        return await Task.FromResult(new APIResponse<FlpProcessResponseDto>
-                        {
-                            ResultStatus = APIResultStatus.InvalidParameters,
-                            ResponseMessage = new List<string> { "Invalid file extention" },
-                            Result = null
-                        });
-                    }
-                }
-                if (flpConfigurationRequestDto.DestinationLocationTypeId == (int)DestinationLocationTypeEnum.Azure)
-                {
-                    destinationStorageAccountDto = await _fileLoadingProcessConfiguration.DestinationstorageAccountInfo(flpConfigurationRequestDto.FlpConfigurationId);
-                }
-                else if (flpConfigurationRequestDto.DestinationLocationTypeId == (int)DestinationLocationTypeEnum.OnPrem)
-                {
-                    sharedLocationDestinationServerDto = await _fileLoadingProcessConfiguration.SharedLocationDestinationServerDetails(flpConfigurationRequestDto.FlpConfigurationId);
-
-                }
-                var res = await TxtProcess(flpConfigurationRequestDto, destinationStorageAccountDto, sharedLocationDestinationServerDto);
-                await UpdateProcessStatus(flpConfigurationRequestDto, res);
-
-                if (!string.IsNullOrWhiteSpace(flpConfigurationRequestDto.UploadedFileId))
-                {
-                    int totalRows = res.Result?.TotalRows ?? 0;
-                    int insertedRows = res.Result?.InsertedRows ?? 0;
-                    int duplicateRows = res.Result?.DuplicateRows ?? 0;
-                    string blobName = res.Result?.BlobName ?? string.Empty;
-                    await _fileLoadingProcessConfiguration.AddBackUpFileDetails(flpConfigurationRequestDto.UploadedFileId, flpConfigurationRequestDto.FlpConfigurationId, res.Result?.BackUpFileName, null, totalRows, insertedRows, duplicateRows, blobName);
-                }
-                else
-                {
-                    _logger.LogError($"Not updated backup file details for {flpConfigurationRequestDto.FlpConfigurationId}");
-                }
-                return await Task.FromResult(new APIResponse<FlpProcessResponseDto>
-                {
-                    ResultStatus = res.ResultStatus,
-                    ResponseMessage = res.ResponseMessage,
-                    Result = res.Result
-                });
-
-            }
-            else
-            {
-                await _fileLoadingProcessConfiguration.UpdateFlpProcessStatus(flpRequestDto.FlpConfigurationId, APIResultStatus.Error);
-                return await Task.FromResult(new APIResponse<FlpProcessResponseDto>
-                {
-                    ResultStatus = configurationResult.ResultStatus,
-                    ResponseMessage = new List<string> { $"Not found records for {flpRequestDto.FlpConfigurationId}" },
-                    Result = null
-                });
-            }
-        }
-
-
-        public async Task<APIResponse<FlpProcessResponseDto>> ProcessExcelFile(FlpRequestDto flpRequestDto)
-        {
-            var configurationResult = await _fileLoadingProcessConfiguration.GetFlpProcessByConfigurationId(flpRequestDto.FlpConfigurationId,"");
-            if (configurationResult.ResponseCode == 200)
-            {
-                var flpConfigurationRequestDto = configurationResult.Result;
-                DestinationStorageAccountDto destinationStorageAccountDto = null;
-                SharedLocationDestinationServerDto sharedLocationDestinationServerDto = null;
-                if ( flpConfigurationRequestDto.LocationTypeId == (int)SourceLocationTypeEnum.Azure)
-                {
-
-                    flpConfigurationRequestDto.BlobClients = flpRequestDto.BlobClients;
-                    flpConfigurationRequestDto.UploadedFileId = flpRequestDto.BlobClients.UploadedId;
-                    var blobClients = flpConfigurationRequestDto.BlobClients;
-                    if (blobClients == null)
-                    {
-                        await _fileLoadingProcessConfiguration.UpdateFlpProcessStatus(flpConfigurationRequestDto.FlpConfigurationId, APIResultStatus.Error);
-                        return await Task.FromResult(new APIResponse<FlpProcessResponseDto>
-                        {
-                            ResultStatus = APIResultStatus.InvalidParameters,
-                            ResponseMessage = new List<string> { "Not found blob client details" },
-                            Result = null
-                        });
-                    }
-                    var isValidFile1 = await _fileLoadingProcessConfiguration.IsValidFile(flpConfigurationRequestDto.FlpConfigurationId, blobClients.Name, ".xlsx");
-                    var isValidFile2 = await _fileLoadingProcessConfiguration.IsValidFile(flpConfigurationRequestDto.FlpConfigurationId, blobClients.Name, ".xls");
-                    if (!isValidFile1 && !isValidFile2)
-                    {
-                        await _fileLoadingProcessConfiguration.UpdateFlpProcessStatus(flpConfigurationRequestDto.FlpConfigurationId, APIResultStatus.Error);
-                        return await Task.FromResult(new APIResponse<FlpProcessResponseDto>
-                        {
-                            ResultStatus = APIResultStatus.InvalidParameters,
-                            ResponseMessage = new List<string> { "Invalid file extention" },
-                            Result = null
-                        });
-                    }
-
-
-
-                }
-               
-                else if (flpConfigurationRequestDto.LocationTypeId == (int)SourceLocationTypeEnum.OnPrem)
-                {
-                    flpConfigurationRequestDto.SourcePath = flpRequestDto.OnPremFileLocation.FileUrl;
-                    flpConfigurationRequestDto.UploadedFileId = flpRequestDto.OnPremFileLocation.UploadedId;
-
-                    var isValidFile1 = await _fileLoadingProcessConfiguration.IsValidFile(flpConfigurationRequestDto.FlpConfigurationId, flpConfigurationRequestDto.SourcePath, ".xlsx");
-                    var isValidFile2 = await _fileLoadingProcessConfiguration.IsValidFile(flpConfigurationRequestDto.FlpConfigurationId, flpConfigurationRequestDto.SourcePath, ".xls");
-                    if (!isValidFile1 && !isValidFile2)
-                    {
-                        await _fileLoadingProcessConfiguration.UpdateFlpProcessStatus(flpConfigurationRequestDto.FlpConfigurationId, APIResultStatus.Error);
-                        return await Task.FromResult(new APIResponse<FlpProcessResponseDto>
-                        {
-                            ResultStatus = APIResultStatus.InvalidParameters,
-                            ResponseMessage = new List<string> { "Invalid file extention" },
-                            Result = null
-                        });
-                    }
-                }
-                if (flpConfigurationRequestDto.DestinationLocationTypeId == (int)DestinationLocationTypeEnum.Azure)
-                {
-                    destinationStorageAccountDto = await _fileLoadingProcessConfiguration.DestinationstorageAccountInfo(flpConfigurationRequestDto.FlpConfigurationId);
-                }
-                else if (flpConfigurationRequestDto.DestinationLocationTypeId == (int)DestinationLocationTypeEnum.OnPrem)
-                {
-                    sharedLocationDestinationServerDto = await _fileLoadingProcessConfiguration.SharedLocationDestinationServerDetails(flpConfigurationRequestDto.FlpConfigurationId);
-
-                }
-                var res = await ExcelProcess(flpConfigurationRequestDto, destinationStorageAccountDto, sharedLocationDestinationServerDto);
-                
-                 await UpdateProcessStatus(flpConfigurationRequestDto, res);
-                if (!string.IsNullOrWhiteSpace(flpConfigurationRequestDto.UploadedFileId))
-                {
-                   
-                    int totalRows = res.Result?.TotalRows ?? 0;
-                    int insertedRows = res.Result?.InsertedRows ?? 0;
-                    int duplicateRows = res.Result?.DuplicateRows ?? 0;
-                    string blobName = res.Result?.BlobName ?? string.Empty;
-                    await _fileLoadingProcessConfiguration.AddBackUpFileDetails(flpConfigurationRequestDto.UploadedFileId, flpConfigurationRequestDto.FlpConfigurationId, res.Result?.BackUpFileName, null, totalRows, insertedRows, duplicateRows, blobName);
-                }
-                else
-                {
-                    _logger.LogError($"Not updated backup file details for {flpConfigurationRequestDto.FlpConfigurationId}");
-                }
-                return await Task.FromResult(new APIResponse<FlpProcessResponseDto>
-                {
-                    ResultStatus = res.ResultStatus,
-                    ResponseMessage = res.ResponseMessage,
-                    Result = res.Result
-                });
-
-            }
-            else
-            {
-                await _fileLoadingProcessConfiguration.UpdateFlpProcessStatus(flpRequestDto.FlpConfigurationId, APIResultStatus.Error);
-                return await Task.FromResult(new APIResponse<FlpProcessResponseDto>
-                {
-                    ResultStatus = configurationResult.ResultStatus,
-                    ResponseMessage = new List<string> { $"Not found records for {flpRequestDto.FlpConfigurationId}" },
-                    Result = null
-                });
-            }
-        }
-
-
-        public async Task<APIResponse<FlpProcessResponseDto>> CsvProcess(FlpConfigurationResponseDto flpConfigurationRequestDto, DestinationStorageAccountDto destinationStorageAccountDto, SharedLocationDestinationServerDto slDestinationServerDto)
-        {
-            FlpProcessResponseDto flpConvertToParquetResponseDto = new FlpProcessResponseDto();
-            string fileType = "csv";
-
-           
-            ConfigurationTableMappingDto configurationTableMappingDto = (await GetMappingTableNameList(flpConfigurationRequestDto?.FlpConfigurationId ?? string.Empty, null, fileType, false))
-                                      .FirstOrDefault();
-
-
-
-            
-
-            if (configurationTableMappingDto == null)
-            {
-              
-                return await Task.FromResult(new APIResponse<FlpProcessResponseDto>
-                {
-                    ResultStatus = APIResultStatus.InvalidParameters,
-                    ResponseMessage = new List<string> { $"Not found flpConfigurationlist for {flpConfigurationRequestDto.FlpConfigurationId} " },
-                    Result = null
-                });
-            }
-
-
-            if (!FlpConfigurationHelper.ValidString(configurationTableMappingDto.DatabaseConnectionSecret))
-            {
-                _logger.LogError($"Not found DatabaseConnectionSecret for {flpConfigurationRequestDto.FlpConfigurationId}");
-                return await Task.FromResult(new APIResponse<FlpProcessResponseDto>
-                {
-                    ResultStatus = APIResultStatus.InvalidParameters,
-                    ResponseMessage = new List<string> { $"Not found DatabaseConnectionSecret for {flpConfigurationRequestDto.FlpConfigurationId}" },
-                    Result = null
-                });
-            }
-
-            //flpConfigurationRequestDto.TableName = tableName;
-            string connectionString = KeyVault.GetKeyVaultValue(configurationTableMappingDto.DatabaseConnectionSecret).Result;
-            long processId = long.Parse(DateTime.UtcNow.ToString("yyyyMMddHHmmss"));
-            string fileLocation = FlpConfigurationHelper.GetFileLocation(flpConfigurationRequestDto);
-            string fileUploadedId = "";// flpConfigurationRequestDto.BlobClients !=null? flpConfigurationRequestDto.BlobClients.UploadedId:flpConfigurationRequestDto.UploadedFileId;
-            string backupFileName = "";
-
-            if (flpConfigurationRequestDto.LocationTypeId == (int)SourceLocationTypeEnum.Azure)
-            {
-                fileUploadedId = flpConfigurationRequestDto.BlobClients.UploadedId;
-                backupFileName = FlpConfigurationHelper.GetBackUpFileName(flpConfigurationRequestDto.BlobClients.Name, processId.ToString());
-            }
-            else
-            {
-                backupFileName = FlpConfigurationHelper.GetBackUpFileName(flpConfigurationRequestDto.SourcePath, processId.ToString());
-                fileUploadedId = flpConfigurationRequestDto.UploadedFileId;
-
-            }
-
-            try
-            {
-                //FlpConfigurationMethods.GetBackUpFileName(flpConfigurationRequestDto.BlobClients.Name, processId.ToString());
-                flpConvertToParquetResponseDto.BackUpFileName = backupFileName;
-                (FlpProcessTempFile? flpProcessTempFile, bool movedFileToTemp) = await _iIFileProcessingService.MoveSourceFileToTemporaryDestinationAndDelete(processId, fileType, fileLocation, fileUploadedId, backupFileName, configurationTableMappingDto, flpConfigurationRequestDto, destinationStorageAccountDto, slDestinationServerDto);
-                if (!movedFileToTemp)
-                {
-                    return await Task.FromResult(new APIResponse<FlpProcessResponseDto>
-                    {
-                        ResultStatus = APIResultStatus.InvalidParameters,
-                        ResponseMessage = new List<string> { "Something went wrong" },
-                        Result = null
-                    });
-                }
-                flpConvertToParquetResponseDto.BlobName = flpProcessTempFile?.Name??"";
-                FlpActivityLogStatusEnum currentStatus = FlpActivityLogStatusEnum.ConversionToParqetFileMovedToParquetLocation;
-
-               
-                await _iIFileProcessingService.AddFileProcessLosStatus(
-                          fileType: fileType,
-                          loginId: "",
-                          message: $"File conversion process in progress",
-                          messageType: "info",
-                          processId: processId,
-                          processName: flpConfigurationRequestDto.ProcessName,
-                          tableName: configurationTableMappingDto.TableName,//flpConfigurationRequestDto.TableName,
-                          totalRows: 0,
-                          flpConfigurationId: flpConfigurationRequestDto.FlpConfigurationId,
-                          fileUploadedId: fileUploadedId,
-                          FileStatusActivityEnum.Processing,
-                          FlpActivityLogStatusEnum.ConversionToParqetFileMovedToParquetLocation);
-                ParquetFileResponseDto resultResponse = null;
-                //var csvToParquetStream = new FlpCsvToParquet(_activityLoggerRepository, _dataRepository, _ismbLibraryServices);
-                if (flpConfigurationRequestDto.DestinationLocationTypeId == (int)DestinationLocationTypeEnum.Azure)
-                {
-                    resultResponse = await _iCsvToParquetConverterService.ConvertDataToParquet(configurationTableMappingDto,flpConfigurationRequestDto, flpProcessTempFile);
-                }
-                else
-                {
-                    CheckConnectivitySMBLibraryModel destinationServerModel = new CheckConnectivitySMBLibraryModel
-                    {
-                        serverIP = slDestinationServerDto.ServerName,
-                        username = slDestinationServerDto.UserName,
-                        password = slDestinationServerDto.Password,
-                        sharedFolderName = slDestinationServerDto.FolderName,
-                        domain = slDestinationServerDto.Domain
-                    };
-                    resultResponse = await _iCsvToParquetConverterService.ConvertDataToParquetOnPremSharedLocation(flpProcessTempFile?.sourceTempFilePath ?? "", configurationTableMappingDto,flpConfigurationRequestDto, destinationServerModel);
-                }
-                if (resultResponse != null &&  resultResponse.ParquetFileCreated)
-                {
-                    var response = await _iIFileProcessingService.ParquetFileProcessToBronzeTable(processId, fileType, fileLocation,null, connectionString, currentStatus, flpProcessTempFile, resultResponse,configurationTableMappingDto, flpConfigurationRequestDto, destinationStorageAccountDto, slDestinationServerDto);
-                    return response;
-                }
-                else
-                {
-                    string errorMessage = resultResponse?.ErrorMessage ?? "Something went wrong";
-                    //Add error log
-                    await _iIFileProcessingService.AddFileProcessLosStatus(
-                          fileType: fileType,
-                          loginId: "",
-                          message: $"Error:{errorMessage}",
-                          messageType: "error",
-                          processId: processId,
-                          processName: flpConfigurationRequestDto.ProcessName,
-                          tableName: configurationTableMappingDto.TableName,// flpConfigurationRequestDto.TableName,
-                          totalRows: 0,
-                          flpConfigurationId: flpConfigurationRequestDto.FlpConfigurationId,
-                          fileUploadedId: flpConfigurationRequestDto.UploadedFileId,
-                          FileStatusActivityEnum.Error,
-                          FlpActivityLogStatusEnum.ConversionToParqetFileMovedToParquetLocation
-                     );
-
-                    return await Task.FromResult(new APIResponse<FlpProcessResponseDto>
-                    {
-                        ResultStatus = APIResultStatus.InvalidParameters,
-                        ResponseMessage = new List<string> { errorMessage },
-                        Result = flpConvertToParquetResponseDto
-                    });
-                }
-                   
-               
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"No records found in flpConfigurations.{flpConfigurationRequestDto.FlpConfigurationId}",$"Error:{ex.Message}");               
-                return await Task.FromResult(new APIResponse<FlpProcessResponseDto>
-                {
-                    ResultStatus = APIResultStatus.Error,
-                    ResponseMessage = new List<string> { "Something went wrong" },
-                    Result = flpConvertToParquetResponseDto
-                });
-            }
-        }
-
-
-        public async Task<APIResponse<FlpProcessResponseDto>> TxtProcess(FlpConfigurationResponseDto flpConfigurationRequestDto, DestinationStorageAccountDto destinationStorageAccountDto, SharedLocationDestinationServerDto slDestinationServerDto)
-        {
-            FlpProcessResponseDto flpConvertToParquetResponseDto = new FlpProcessResponseDto();
-            string fileType = "txt";
-
-            ConfigurationTableMappingDto configurationTableMappingDto = (await GetMappingTableNameList(flpConfigurationRequestDto?.FlpConfigurationId ?? string.Empty, null, fileType, false))
-                                      .FirstOrDefault();
-
-            if (configurationTableMappingDto == null)
-            {
-
-                return await Task.FromResult(new APIResponse<FlpProcessResponseDto>
-                {
-                    ResultStatus = APIResultStatus.InvalidParameters,
-                    ResponseMessage = new List<string> { $"Not found flpConfigurationlist for {flpConfigurationRequestDto.FlpConfigurationId} " },
-                    Result = null
-                });
-            }
-
-            if (!FlpConfigurationHelper.ValidString(configurationTableMappingDto.DatabaseConnectionSecret))
-            {
-                _logger.LogError($"Not found DatabaseConnectionSecret for {flpConfigurationRequestDto.FlpConfigurationId}");
-                return await Task.FromResult(new APIResponse<FlpProcessResponseDto>
-                {
-                    ResultStatus = APIResultStatus.InvalidParameters,
-                    ResponseMessage = new List<string> { $"Not found DatabaseConnectionSecret for {flpConfigurationRequestDto.FlpConfigurationId}" },
-                    Result = null
-                });
-            }
-
-
-            //flpConfigurationRequestDto.TableName = tableName;
-            string connectionString = KeyVault.GetKeyVaultValue(configurationTableMappingDto.DatabaseConnectionSecret).Result;
-            long processId = long.Parse(DateTime.UtcNow.ToString("yyyyMMddHHmmss"));
-            string fileLocation = FlpConfigurationHelper.GetFileLocation(flpConfigurationRequestDto);
-            string fileUploadedId = "";// flpConfigurationRequestDto.BlobClients !=null? flpConfigurationRequestDto.BlobClients.UploadedId:flpConfigurationRequestDto.UploadedFileId;
-            string backupFileName = "";
-
-            if (flpConfigurationRequestDto.LocationTypeId == (int)SourceLocationTypeEnum.Azure)
-            {
-                fileUploadedId = flpConfigurationRequestDto.BlobClients.UploadedId;
-                backupFileName = FlpConfigurationHelper.GetBackUpFileName(flpConfigurationRequestDto.BlobClients.Name, processId.ToString());
-            }
-            else
-            {
-                backupFileName = FlpConfigurationHelper.GetBackUpFileName(flpConfigurationRequestDto.SourcePath, processId.ToString());
-                fileUploadedId = flpConfigurationRequestDto.UploadedFileId;
-
-            }
-
-            try
-            {
-                //FlpConfigurationMethods.GetBackUpFileName(flpConfigurationRequestDto.BlobClients.Name, processId.ToString());
-                flpConvertToParquetResponseDto.BackUpFileName = backupFileName;
-                (FlpProcessTempFile? flpProcessTempFile, bool movedFileToTemp) = await _iIFileProcessingService.MoveSourceFileToTemporaryDestinationAndDelete(processId, fileType, fileLocation, fileUploadedId, backupFileName, configurationTableMappingDto, flpConfigurationRequestDto, destinationStorageAccountDto, slDestinationServerDto);
-                if (!movedFileToTemp)
-                {
-                    return await Task.FromResult(new APIResponse<FlpProcessResponseDto>
-                    {
-                        ResultStatus = APIResultStatus.InvalidParameters,
-                        ResponseMessage = new List<string> { "Something went wrong" },
-                        Result = null
-                    });
-                }
-
-                FlpActivityLogStatusEnum currentStatus = FlpActivityLogStatusEnum.ConversionToParqetFileMovedToParquetLocation;
-                flpConvertToParquetResponseDto.BlobName = flpProcessTempFile?.Name ?? "";
-
-
-                await _iIFileProcessingService.AddFileProcessLosStatus(
-                          fileType: fileType,
-                          loginId: "",
-                          message: $"File conversion process in progress",
-                          messageType: "info",
-                          processId: processId,
-                          processName: flpConfigurationRequestDto.ProcessName,
-                          tableName: configurationTableMappingDto.TableName,//flpConfigurationRequestDto.TableName,
-                          totalRows: 0,
-                          flpConfigurationId: flpConfigurationRequestDto.FlpConfigurationId,
-                          fileUploadedId: fileUploadedId,
-                          FileStatusActivityEnum.Processing,
-                          FlpActivityLogStatusEnum.ConversionToParqetFileMovedToParquetLocation);
-                ParquetFileResponseDto resultResponse = null;
-                //var csvToParquetStream = new FlpCsvToParquet(_activityLoggerRepository, _dataRepository, _ismbLibraryServices);
-                if (flpConfigurationRequestDto.DestinationLocationTypeId == (int)DestinationLocationTypeEnum.Azure)
-                {
-                    resultResponse = await _iTxtToParquetConverterService.ConvertDataToParquet(configurationTableMappingDto, flpConfigurationRequestDto, flpProcessTempFile);
-                }
-                else
-                {
-                    CheckConnectivitySMBLibraryModel destinationServerModel = new CheckConnectivitySMBLibraryModel
-                    {
-                        serverIP = slDestinationServerDto.ServerName,
-                        username = slDestinationServerDto.UserName,
-                        password = slDestinationServerDto.Password,
-                        sharedFolderName = slDestinationServerDto.FolderName,
-                        domain = slDestinationServerDto.Domain
-                    };
-                    resultResponse = await _iTxtToParquetConverterService.ConvertDataToParquetOnPremSharedLocation(flpProcessTempFile?.sourceTempFilePath ?? "", configurationTableMappingDto, flpConfigurationRequestDto, destinationServerModel);
-                }
-                if (resultResponse != null && resultResponse.ParquetFileCreated)
-                {
-                    var response = await _iIFileProcessingService.ParquetFileProcessToBronzeTable(processId, fileType, fileLocation, null, connectionString, currentStatus, flpProcessTempFile, resultResponse, configurationTableMappingDto, flpConfigurationRequestDto, destinationStorageAccountDto, slDestinationServerDto);
-                    return response;
-                }
-                else
-                {
-                    string errorMessage = resultResponse?.ErrorMessage ?? "Something went wrong";
-                    //Add error log
-                    await _iIFileProcessingService.AddFileProcessLosStatus(
-                          fileType: fileType,
-                          loginId: "",
-                          message: $"Error:{errorMessage}",
-                          messageType: "error",
-                          processId: processId,
-                          processName: flpConfigurationRequestDto.ProcessName,
-                          tableName: configurationTableMappingDto.TableName,// flpConfigurationRequestDto.TableName,
-                          totalRows: 0,
-                          flpConfigurationId: flpConfigurationRequestDto.FlpConfigurationId,
-                          fileUploadedId: flpConfigurationRequestDto.UploadedFileId,
-                          FileStatusActivityEnum.Error,
-                          FlpActivityLogStatusEnum.ConversionToParqetFileMovedToParquetLocation
-                     );
-
-                    return await Task.FromResult(new APIResponse<FlpProcessResponseDto>
-                    {
-                        ResultStatus = APIResultStatus.InvalidParameters,
-                        ResponseMessage = new List<string> { errorMessage },
-                        Result = flpConvertToParquetResponseDto
-                    });
-                }
-
-
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"No records found in flpConfigurations.{flpConfigurationRequestDto.FlpConfigurationId}", $"Error:{ex.Message}");
-                return await Task.FromResult(new APIResponse<FlpProcessResponseDto>
-                {
-                    ResultStatus = APIResultStatus.Error,
-                    ResponseMessage = new List<string> { "Something went wrong" },
-                    Result = flpConvertToParquetResponseDto
-                });
-            }
-        }
-
-
-        public async Task<APIResponse<FlpProcessResponseDto>> ExcelProcess(FlpConfigurationResponseDto flpConfigurationRequestDto, DestinationStorageAccountDto destinationStorageAccountDto, SharedLocationDestinationServerDto slDestinationServerDto)
-        {
-            FlpProcessResponseDto flpConvertToParquetResponseDto = new FlpProcessResponseDto();
-            string fileType = "excel";
-
-           
-            ConfigurationTableMappingDto configurationTableMappingDto = (await GetMappingTableNameList(flpConfigurationRequestDto?.FlpConfigurationId ?? string.Empty, null, "xlsx", true))
-                                      .FirstOrDefault();
-
-            if (configurationTableMappingDto == null)
-            {
-
-                return await Task.FromResult(new APIResponse<FlpProcessResponseDto>
-                {
-                    ResultStatus = APIResultStatus.InvalidParameters,
-                    ResponseMessage = new List<string> { $"Not found flpConfigurationlist for {flpConfigurationRequestDto.FlpConfigurationId} " },
-                    Result = null
-                });
-            }
-
-
-            if (!FlpConfigurationHelper.ValidString(configurationTableMappingDto.DatabaseConnectionSecret))
-            {
-                _logger.LogError($"Not found DatabaseConnectionSecret for {flpConfigurationRequestDto.FlpConfigurationId}");
-                return await Task.FromResult(new APIResponse<FlpProcessResponseDto>
-                {
-                    ResultStatus = APIResultStatus.InvalidParameters,
-                    ResponseMessage = new List<string> { $"Not found DatabaseConnectionSecret for {flpConfigurationRequestDto.FlpConfigurationId}" },
-                    Result = null
-                });
-            }
-
-            //flpConfigurationRequestDto.TableName = tableName;
-            string connectionString = KeyVault.GetKeyVaultValue(configurationTableMappingDto.DatabaseConnectionSecret).Result;
-            long processId = long.Parse(DateTime.UtcNow.ToString("yyyyMMddHHmmss"));
-            string fileLocation = FlpConfigurationHelper.GetFileLocation(flpConfigurationRequestDto);
-            string fileUploadedId = "";// flpConfigurationRequestDto.BlobClients !=null? flpConfigurationRequestDto.BlobClients.UploadedId:flpConfigurationRequestDto.UploadedFileId;
-            string backupFileName = "";
-
-            if (flpConfigurationRequestDto.LocationTypeId == (int)SourceLocationTypeEnum.Azure)
-            {
-                fileUploadedId = flpConfigurationRequestDto.BlobClients.UploadedId;
-                backupFileName = FlpConfigurationHelper.GetBackUpFileName(flpConfigurationRequestDto.BlobClients.Name, processId.ToString());
-            }
-            else
-            {
-                backupFileName = FlpConfigurationHelper.GetBackUpFileName(flpConfigurationRequestDto.SourcePath, processId.ToString());
-                fileUploadedId = flpConfigurationRequestDto.UploadedFileId;
-
-            }
-
-            try
-            {
-                //FlpConfigurationMethods.GetBackUpFileName(flpConfigurationRequestDto.BlobClients.Name, processId.ToString());
-                flpConvertToParquetResponseDto.BackUpFileName = backupFileName;
-                (FlpProcessTempFile? flpProcessTempFile, bool movedFileToTemp) = await _iIFileProcessingService.MoveSourceFileToTemporaryDestinationAndDelete(processId, fileType, fileLocation, fileUploadedId, backupFileName, configurationTableMappingDto, flpConfigurationRequestDto, destinationStorageAccountDto, slDestinationServerDto);
-                if (!movedFileToTemp)
-                {
-                    return await Task.FromResult(new APIResponse<FlpProcessResponseDto>
-                    {
-                        ResultStatus = APIResultStatus.InvalidParameters,
-                        ResponseMessage = new List<string> { "Something went wrong" },
-                        Result = null
-                    });
-                }
-                flpConvertToParquetResponseDto.BlobName = flpProcessTempFile?.Name ?? "";
-                FlpActivityLogStatusEnum currentStatus = FlpActivityLogStatusEnum.ConversionToParqetFileMovedToParquetLocation;
-
-                
-
-                await _iIFileProcessingService.AddFileProcessLosStatus(
-                          fileType: fileType,
-                          loginId: "",
-                          message: $"File conversion process in progress",
-                          messageType: "info",
-                          processId: processId,
-                          processName: flpConfigurationRequestDto.ProcessName,
-                          tableName: configurationTableMappingDto.TableName,//flpConfigurationRequestDto.TableName,
-                          totalRows: 0,
-                          flpConfigurationId: flpConfigurationRequestDto.FlpConfigurationId,
-                          fileUploadedId: fileUploadedId,
-                          FileStatusActivityEnum.Processing,
-                          FlpActivityLogStatusEnum.ConversionToParqetFileMovedToParquetLocation);
-                ParquetFileResponseDto resultResponse = null;
-                //var csvToParquetStream = new FlpCsvToParquet(_activityLoggerRepository, _dataRepository, _ismbLibraryServices);
-                if (flpConfigurationRequestDto.DestinationLocationTypeId == (int)DestinationLocationTypeEnum.Azure)
-                {
-                    resultResponse = await _iExcelToParquetConverterService.ConvertDataToParquet(configurationTableMappingDto, flpConfigurationRequestDto, flpProcessTempFile);
-                }
-                else
-                {
-                    CheckConnectivitySMBLibraryModel destinationServerModel = new CheckConnectivitySMBLibraryModel
-                    {
-                        serverIP = slDestinationServerDto.ServerName,
-                        username = slDestinationServerDto.UserName,
-                        password = slDestinationServerDto.Password,
-                        sharedFolderName = slDestinationServerDto.FolderName,
-                        domain = slDestinationServerDto.Domain
-                    };
-                    resultResponse = await _iExcelToParquetConverterService.ConvertDataToParquetOnPremSharedLocation(flpProcessTempFile?.sourceTempFilePath ?? "", configurationTableMappingDto, flpConfigurationRequestDto, destinationServerModel);
-                }
-
-
-                if (resultResponse != null && resultResponse.ParquetFileCreated)
-                {
-                    var response = await _iIFileProcessingService.ParquetFileProcessToBronzeTable(processId, fileType, fileLocation, null, connectionString, currentStatus, flpProcessTempFile, resultResponse, configurationTableMappingDto, flpConfigurationRequestDto, destinationStorageAccountDto, slDestinationServerDto);
-                        return response;                    
-                    
-                }
-                else
-                {
-                    string errorMessage = resultResponse?.ErrorMessage ?? "Something went wrong";
-                    //Add error log
-                    await _iIFileProcessingService.AddFileProcessLosStatus(
-                          fileType: fileType,
-                          loginId: "",
-                          message: $"Error:{errorMessage}",
-                          messageType: "error",
-                          processId: processId,
-                          processName: flpConfigurationRequestDto.ProcessName,
-                          tableName: configurationTableMappingDto.TableName,// flpConfigurationRequestDto.TableName,
-                          totalRows: 0,
-                          flpConfigurationId: flpConfigurationRequestDto.FlpConfigurationId,
-                          fileUploadedId: flpConfigurationRequestDto.UploadedFileId,
-                          FileStatusActivityEnum.Error,
-                          FlpActivityLogStatusEnum.ConversionToParqetFileMovedToParquetLocation
-                     );
-
-                    return await Task.FromResult(new APIResponse<FlpProcessResponseDto>
-                    {
-                        ResultStatus = APIResultStatus.InvalidParameters,
-                        ResponseMessage = new List<string> { errorMessage },
-                        Result = flpConvertToParquetResponseDto
-                    });
-                }
-
-
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"No records found in flpConfigurations.{flpConfigurationRequestDto.FlpConfigurationId}", $"Error:{ex.Message}");
-                return await Task.FromResult(new APIResponse<FlpProcessResponseDto>
-                {
-                    ResultStatus = APIResultStatus.Error,
-                    ResponseMessage = new List<string> { "Something went wrong" },
-                    Result = flpConvertToParquetResponseDto
-                });
-            }
-        }
-
-        public async Task<APIResponse<bool>> UpdateProcessSchedulerLastDate(string flpConfigurationId)
-        {
-            var dbResponse = await _fileLoadingProcessConfiguration.UpdateProcessSchedulerLastDate(flpConfigurationId);
-            return await Task.FromResult(new APIResponse<bool>
-            {
-                ResultStatus = dbResponse?APIResultStatus.Completed:APIResultStatus.Error,
-                ResponseMessage = new List<string> { $"Updated scheduler" },
-                Result = dbResponse
-            });
-        }
-
-        private async Task<List<ConfigurationTableMappingDto>> GetMappingTableNameList(string flpConfigurationId, string? tabName, string fileType, bool isFirstSheet)
-        {
-            // Fetch the data based on the configuration ID
-            var dbResult = await _fileLoadingProcessConfiguration.ConfigurationTableMapping(flpConfigurationId);
-
-            // No need to map its already mapped , just filter
-            var result = dbResult.Where(x =>
-                             (fileType == "csv" || fileType == "txt") ||
-                             ((fileType == "xlsx" || fileType == "xls") && !isFirstSheet && x.TabName == tabName) ||
-                             ((fileType == "xlsx" || fileType == "xls") && isFirstSheet)).ToList();
-
-            return result;
-        }
-
-
-        private async Task UpdateProcessStatus(FlpConfigurationResponseDto flpConfigurationRequestDto, APIResponse<FlpProcessResponseDto> apiResponse)
-        {
-            if (apiResponse.ResultStatus.Code == APIResultStatus.Completed.Code)
-            {
-                await _fileLoadingProcessConfiguration.UpdateFlpProcessStatus(flpConfigurationRequestDto.UploadedFileId, APIResultStatus.Completed);
-                await _fileLoadingProcessConfiguration.UpdateProcessSchedulerStatus(flpConfigurationRequestDto.FlpConfigurationId, APIResultStatus.Completed);
-              
-                
-            }
-            else
-            {
-                await _fileLoadingProcessConfiguration.UpdateFlpProcessStatus(flpConfigurationRequestDto.UploadedFileId, APIResultStatus.Error);
-                await _fileLoadingProcessConfiguration.UpdateProcessSchedulerStatus(flpConfigurationRequestDto.FlpConfigurationId, APIResultStatus.Error);
-
-            }
-          
-        }
-      
+import { Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { TreeviewItem } from  '@ccondrup/ngx-treeview';
+import { FileUploadStatusService } from '../core/services/file-status.service';
+import { APIResponse } from '../shared/models/apiResponse';
+import { Subscription, interval } from 'rxjs';
+import {
+  Duration,
+  FileConfigAndStatus,
+  FileStatus,
+  FileUploadDetailedStatus,
+  FlpConfigurationResponse,
+  FlpUploadedFileStatusResponse,
+} from '../shared/models/fileUploadStatus';
+import { ActivatedRoute, Router } from '@angular/router';
+import { environment } from '../environments/environment';
+import { ProcessStatusTemplateComponent } from '../process-status-template/process-status-template.component';
+import { DashboardService } from '../core/services/dashboard.service';
+import { DataSourceType } from '../shared/enum';
+import { SharePointConfigurationFirstRuntimeService } from '../sharepoint/services/sharepoint-configuration-first-runtime.service';
+
+@Component({
+    selector: 'app-file-processing-status',
+    templateUrl: './file-processing-status.component.html',
+    styleUrl: './file-processing-status.component.css',
+    standalone: false
+})
+export class FileProcessingStatusComponent implements OnInit, OnDestroy {
+  @ViewChild(ProcessStatusTemplateComponent)
+  processStatus!: ProcessStatusTemplateComponent;
+  fileUploadStatusView: TreeviewItem[];
+  fileUploadStatus: FileStatus[];
+  fileConfigAndStatus: FileConfigAndStatus[];
+  fileUploadDetailedStatus: FileUploadDetailedStatus;
+  flpUploadedFileStatusResponse: FlpUploadedFileStatusResponse[];
+  selectedValues: string[];
+  dataSubscription: Subscription = new Subscription();
+  refreshInterval = environment.refreshInterval;
+  intervalId: any;
+  timeDuration: Duration;
+  apiErrorMessage: string = '';
+  flpConfigurationID: string = '';
+  uploadFileId: string = '';
+  paramsId: string = '';
+  collapsedId: string = '';
+  collapsedChildId: string = '';
+  isIntervalStarted: boolean = false;
+  expandParent: boolean = false;
+  expandChild: boolean = false;
+  isDetailedStatus: boolean = true;
+  tabName:string = null;
+  DataSourceTypes = DataSourceType;
+  constructor(
+    private fileUploadService: FileUploadStatusService,
+    private dashboardService: DashboardService,
+    private router: Router,
+    private route: ActivatedRoute,
+    private sharePointCfRuntime: SharePointConfigurationFirstRuntimeService,
+  ) {}
+  ngOnInit(): void {
+    this.route.params.subscribe((params) => {
+      this.paramsId = params['id'];
+    });
+    this.apiErrorMessage = '';
+    this.fileUploadStatus = [];
+    // #region SharePoint Workspace - AY
+    this.dataSubscription.add(
+      this.sharePointCfRuntime.runDueSharePointProcesses().subscribe({
+        next: () => this.getFileUploadedStatus(),
+        error: () => this.getFileUploadedStatus(),
+      }),
+    );
+    // #endregion
+    this.dataSubscription.add(
+      interval(this.refreshInterval).subscribe(() => this.getStatus())
+    );
+  }
+  updateStatus(data: Duration) {
+    if (data) {
+      this.timeDuration = data;
+      // let indx = this.timeDuration.indexOf(data);
+      // if (indx != -1) this.timeDuration.splice(indx, 1);
+      // this.timeDuration.push(data);
     }
+  }
+  // getUpdatedDuration(uploadFileId: string ="") {
+  //   this.timeDuration.find((x) => x.uploadFileId == uploadFileId).endTime;
+  // }    
+  getFileIdByConfigId(
+    responses: FlpUploadedFileStatusResponse[],
+    flpConfigurationID: string
+  ) {
+    return responses.flatMap((response) =>
+      response.fileConfigurationStatusList
+        .filter(
+          (configuration) =>
+            configuration.flpConfigurationID == flpConfigurationID
+        )
+        .flatMap((configuration) =>
+          configuration.uploadedFiles.map((file) => file.uploadFileId)
+        )
+    );
+  }
+
+  getConfigIdByClientId(
+    responses: FlpUploadedFileStatusResponse[],
+    clientId: number
+  ) {
+    return responses
+      .filter((response) => response.clientId == clientId)
+      .flatMap((response) =>
+        response.fileConfigurationStatusList.map(
+          (configuration) => configuration.flpConfigurationID
+        )
+      );
+  }
+
+  formatFileStatus(fileUploadStatus: FlpUploadedFileStatusResponse[]) {
+    this.fileUploadStatusView = [];
+    try {
+      fileUploadStatus.forEach((x) => {
+        let item = new TreeviewItem({
+          text: x.clientName,
+          value: x.clientId,
+          children: [{ text: '', value: 0 }],
+        });
+        x.fileConfigurationStatusList.forEach((y) => {
+          let tree2 = new TreeviewItem({
+            text: y.flpConfigurationName,
+            value: y.flpConfigurationID,
+            children: [{ text: '', value: 0 }],
+          });
+          
+          y.uploadedFiles.forEach((z) => {
+            if (
+              this.paramsId &&
+              this.paramsId != '' &&
+              z.uploadFileId == this.paramsId
+            ) {
+              item.collapsed = true;
+              tree2.collapsed = true;
+              this.collapsedChildId = tree2.value;
+              this.collapsedId = item.value;
+              if (this.uploadFileId != this.paramsId) {
+                this.getDetailedStatus(y.flpConfigurationID, z.uploadFileId,z.tabName);
+              }
+            } else if (
+              this.collapsedId != '' &&
+              this.collapsedId == item.value
+            ) {
+              item.collapsed = this.expandParent;
+              if (
+                this.collapsedChildId != '' &&
+                this.collapsedChildId == tree2.value
+              )
+                tree2.collapsed = this.expandChild;
+            }
+            let tree3 = new TreeviewItem({ text: z.uploadFileName, value: z });
+            if (tree2.children) tree2.children.push(tree3);
+          });
+          if (item.children) item.children.push(tree2);
+        });
+        
+        this.fileUploadStatusView.push(item);
+      });
+      // if (this.paramsId && this.paramsId != '') {
+      //   this.expandNode(this.paramsId);
+      // }
+    } catch (error) {
+      console.error('error occurred in conversion', error);
+    }
+  }
+  updateFileUploadedStatus(
+    flpUploadedFileStatusResponse: FlpUploadedFileStatusResponse[]
+  ) {
+    try {
+      this.fileUploadStatusView.forEach((x) => {
+        if (x.children) {
+          x.children.forEach((y) => {
+            if(y.children){
+            y.children.forEach((z) => {
+              if (z.value.uploadFileId != '') {
+                let processStatus = this.getProcessStatusName(
+                  flpUploadedFileStatusResponse,
+                  z.value.uploadFileId, z.value.tabName
+                );
+                if (processStatus != '' && z.value.fileProcessstatusName)
+                  z.value.fileProcessstatusName = processStatus;
+              }
+            });
+          }
+          });
+        }
+      });
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+
+  getProcessStatusName(
+  flpUploadedFileStatusResponse: FlpUploadedFileStatusResponse[],
+  uploadFileId: string,
+  tabName: string = null
+): string {
+  if (!flpUploadedFileStatusResponse) return '';
+
+  const processStatus = flpUploadedFileStatusResponse
+    .flatMap((uploadedFiles) =>
+      uploadedFiles.fileConfigurationStatusList.flatMap(
+        (fileConfig) => fileConfig.uploadedFiles || []
+      )
+    )
+    .find((file) =>
+      file.uploadFileId == uploadFileId &&
+      (
+        tabName == null ? true : file.tabName == tabName
+      )
+    );
+
+  return processStatus ? processStatus.fileProcessstatusName : '';
+}
+  // getProcessStatusName(
+  //   flpUploadedFileStatusResponse: FlpUploadedFileStatusResponse[],
+  //   uploadFileId: string,
+  //   tabName:string = null
+  // ): string {
+    
+  //   if (!flpUploadedFileStatusResponse) return '';
+  //   const processStatus = flpUploadedFileStatusResponse
+  //     .flatMap((uploadedFiles) =>
+  //       uploadedFiles.fileConfigurationStatusList.flatMap(
+  //         (fileConfig) => fileConfig.uploadedFiles || []
+  //       )
+  //     )
+  //     .find((file) => (file.uploadFileId == uploadFileId));
+  //     console.log(uploadFileId);
+  //     console.log('process status');
+  //     console.log(processStatus);
+  //   return processStatus ? processStatus.fileProcessstatusName : '';
+  // }
+  getStatus() {
+    this.fileUploadService.getFileUploadStatus().subscribe({
+      next: (response: APIResponse<FlpUploadedFileStatusResponse[] | null>) => {
+        if (response) {
+          if (response.responseCode === 200)
+            if (response.result && response.responseMessage[0] == 'Success') {
+              this.flpUploadedFileStatusResponse = response.result;
+              this.updateFileUploadedStatus(this.flpUploadedFileStatusResponse);
+            } else {
+              //this.apiErrorMessage = response.responseMessage[0];
+            }
+        } else {
+          console.warn('not got any file upload status data!');
+        }
+      },
+      error: (error) => {
+        console.log(error);
+      },
+    });
+  }
+  getFileUploadedStatus() {
+    this.uploadFileId = '';
+    //this.fileUploadStatusView = [];
+    this.flpUploadedFileStatusResponse = [];
+    this.fileUploadStatus = [];
+    this.apiErrorMessage = '';
+    this.fileUploadService.getFileUploadStatus().subscribe({
+      next: (response: APIResponse<FlpUploadedFileStatusResponse[] | null>) => {
+        if (response) {
+          if (response.responseCode === 200)
+            if (response.result && response.responseMessage[0] == 'Success') {
+              console.log(`status response ${response}`)
+              this.formatFileStatus(response.result);
+            } else {
+              //this.apiErrorMessage = response.responseMessage[0];
+            }
+        } else {
+          console.warn('not got any file upload status data!');
+        }
+      },
+      error: (error) => {
+        console.log(error);
+      },
+    });
+  }
+
+  getDetailedStatus(configurationID: string, uploadFileID: string,tabName:string = null, fileProcessingServerTypeId: number = null) {
+    // this.collapsedChildId = '';
+    // this.collapsedId = '';
+    this.isDetailedStatus = !this.isDetailedStatus;
+    this.timeDuration = null;
+    this.router.navigate(['/file-processing-status', uploadFileID]);
+    this.isIntervalStarted = true;
+    this.flpConfigurationID = configurationID;
+    this.uploadFileId = uploadFileID;
+    this.tabName = tabName;
+    this.expandParent = true;
+    this.expandChild = true;
+  }
+  onSelectedChange(values: string[]) {
+    this.selectedValues = values;
+  }
+  expandedItemId: string | null = null;
+  toggleNode(item: TreeviewItem) {
+    this.isDetailedStatus = true;
+    this.paramsId = '';
+    this.collapsedChildId = item.value;
+    //this.fileUploadStatus = [];
+    item.collapsed = !item.collapsed;
+    this.expandChild =  item.collapsed ;
+    this.fileUploadStatusView.forEach((x) => {
+      if (x.children) {
+        x.children.forEach((y) => {
+          if (this.collapsedChildId == y.value) y.collapsed = item.collapsed;
+          else y.collapsed = false;
+        });
+      }
+    });
+    this.getFileUploadedStatus() ;
+  }
+  clientToggleNode(client: TreeviewItem) {
+    this.isDetailedStatus = true;
+    this.paramsId = '';
+    this.collapsedChildId = '';
+    this.collapsedId = client.value;
+    client.collapsed = !client.collapsed;
+    this.expandParent =  client.collapsed ;
+    this.fileUploadStatusView.forEach((x) => {
+      if (this.collapsedId == x.value) x.collapsed = client.collapsed;
+      else x.collapsed = false;
+      if (x.children && client.collapsed) {
+        x.children.forEach((y) => {
+          y.collapsed = false;
+        });
+      }
+    });
+    this.getFileUploadedStatus() ;
+  }
+  expandNode(val: string) {
+    for (const child of this.fileUploadStatusView) {
+      for (const node of child.children) {
+        //if (node.value == val) {
+        // node.collapsed = true;
+        // child.collapsed = true;
+        for (let child of node.children) {
+          if (val != child.value.uploadFileId) {
+            node.collapsed = true;
+            child.collapsed = true;
+            this.getDetailedStatus(val, child.value.uploadFileId, child.value.tabName, child.value.fileProcessingServerTypeId);
+            return;
+          }
+        }
+      }
+    }
+  }
+  getFileExtension(fileName: string): string {
+    return this.dashboardService.getFileExtension(fileName) + '.png';
+  }
+  ngOnDestroy(): void {
+    if (this.dataSubscription) {
+      this.dataSubscription.unsubscribe();
+    }
+    if (this.intervalId) clearInterval(this.intervalId);
+  }
 }
