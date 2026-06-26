@@ -1,0 +1,85 @@
+#region SharePoint Workspace - AY
+    public class FlpSharePointSourceDetail
+    {
+        public string? flpConfigurationId { get; set; }
+        public string? sharePointApplicationId { get; set; }
+        public string? sharePointApplicationSiteId { get; set; }
+        public string? sharePointLibraryName { get; set; }
+        public string? sharePointFolderPath { get; set; }
+        public string? sharePointApplicationName { get; set; }
+        public string? sharePointSiteName { get; set; }
+    }
+    #endregion
+
+
+
+
+     #region SharePoint Workspace - AY
+        Task<FlpSharePointSourceDetail?> GetSharePointSourceByConfigId(string flpConfigurationId);
+        #endregion
+
+
+
+           #region SharePoint Workspace - AY
+        public async Task<FlpSharePointSourceDetail?> GetSharePointSourceByConfigId(string flpConfigurationId)
+        {
+            var param = new DynamicParameters();
+            param.Add("@flpConfigurationId", flpConfigurationId, DbType.String);
+            try
+            {
+                return await _dapperService.GetSingleRowAsync<FlpSharePointSourceDetail>(
+                    "dbo.sel_flpSharePointSourceByConfigId",
+                    param,
+                    commandType: CommandType.StoredProcedure);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+        #endregion
+
+
+
+
+
+         #region SharePoint Workspace - AY
+        public async Task<APIResponse<FlpSharePointSourceDetail?>> GetSharePointSourceByConfigId(string flpConfigurationId)
+        {
+            var response = await _processConfigurationRepository.GetSharePointSourceByConfigId(flpConfigurationId);
+            if (response == null)
+            {
+                return new APIResponse<FlpSharePointSourceDetail?>
+                {
+                    ResultStatus = APIResultStatus.Failed,
+                    ResponseMessage = ["SharePoint source details not found"],
+                    Result = null
+                };
+            }
+
+            return new APIResponse<FlpSharePointSourceDetail?>
+            {
+                ResultStatus = APIResultStatus.Completed,
+                ResponseMessage = ["Success"],
+                Result = response
+            };
+        }
+        #endregion
+
+
+
+
+
+
+          #region SharePoint Workspace - AY
+        [HttpGet("GetSharePointSourceByConfigId")]
+        public async Task<IActionResult> GetSharePointSourceByConfigId(string configurationId)
+        {
+            var result = await _processConfigurationService.GetSharePointSourceByConfigId(configurationId);
+            return StatusCode(result.ResponseCode, result);
+        }
+        #endregion
+
+
+
+
