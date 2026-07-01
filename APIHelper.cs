@@ -129,3 +129,28 @@ private static string BuildSharePointFilePath(string? path, string? webUrl, stri
                             }
                         }
                         #endregion
+
+
+
+
+
+
+
+
+
+
+                             private static string GetImportSchedulerApiUrl(string? fileName, string? fileUrl)
+        {
+            var name = !string.IsNullOrWhiteSpace(fileName)
+                ? fileName
+                : Path.GetFileName((fileUrl ?? "").Split('?')[0]);
+            var extension = Path.GetExtension(name).ToLowerInvariant();
+            if (extension == ".csv")
+                return "api/Import/ProcessCsvFile";
+            if (extension == ".txt")
+                return "api/Import/ProcessTxtFile";
+            if (extension == ".xlsx" || extension == ".xls" || extension == ".xlsb")
+                return "api/Import/ProcessExcelFile";
+            return "";
+        }
+
