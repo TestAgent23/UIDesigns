@@ -37,6 +37,15 @@ private static string BuildSharePointFilePath(string? path, string? webUrl, stri
                     var isValidFile2 = await _fileLoadingProcessConfiguration.IsValidFile(flpConfigurationRequestDto.FlpConfigurationId, sharePointFileName, ".xls");
                     var isValidFile3 = await _fileLoadingProcessConfiguration.IsValidFile(flpConfigurationRequestDto.FlpConfigurationId, sharePointFileName, ".xlsb");
                     if (!isValidFile1 && !isValidFile2 && !isValidFile3)
+
+                        var sharePointFileName = !string.IsNullOrWhiteSpace(flpRequestDto.SharePointFileLocation.FileName)
+                        ? flpRequestDto.SharePointFileLocation.FileName
+                        : flpRequestDto.SharePointFileLocation.FileUrl;
+                    var isValidFile1 = await _fileLoadingProcessConfiguration.IsValidFile(flpConfigurationRequestDto.FlpConfigurationId, sharePointFileName, ".xlsx");
+                    var isValidFile2 = await _fileLoadingProcessConfiguration.IsValidFile(flpConfigurationRequestDto.FlpConfigurationId, sharePointFileName, ".xls");
+                    var isValidFile3 = await _fileLoadingProcessConfiguration.IsValidFile(flpConfigurationRequestDto.FlpConfigurationId, sharePointFileName, ".xlsb");
+                    if (!isValidFile1 && !isValidFile2 && !isValidFile3)
+                    
                     
 
 
