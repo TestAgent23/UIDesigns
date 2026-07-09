@@ -1,0 +1,69 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "C:\\Users\\user\\Desktop\\s\\Integration_Project\\Backend\\Teleperformance.DataIngestion.API\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{DE069AE6-5E50-4094-B3E1-F523861C5831}|Teleperformance.DataIngestion.API\\Teleperformance.DataIngestion.API.csproj|c:\\users\\user\\desktop\\s\\integration_project\\backend\\teleperformance.dataingestion.api\\teleperformance.dataingestion.api\\controllers\\v1.0\\importcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{DE069AE6-5E50-4094-B3E1-F523861C5831}|Teleperformance.DataIngestion.API\\Teleperformance.DataIngestion.API.csproj|solutionrelative:teleperformance.dataingestion.api\\controllers\\v1.0\\importcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{DE069AE6-5E50-4094-B3E1-F523861C5831}|Teleperformance.DataIngestion.API\\Teleperformance.DataIngestion.API.csproj|c:\\users\\user\\desktop\\s\\integration_project\\backend\\teleperformance.dataingestion.api\\teleperformance.dataingestion.api\\controllers\\v3.0\\importcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{DE069AE6-5E50-4094-B3E1-F523861C5831}|Teleperformance.DataIngestion.API\\Teleperformance.DataIngestion.API.csproj|solutionrelative:teleperformance.dataingestion.api\\controllers\\v3.0\\importcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{687FE9FE-18D5-47E8-B8D3-8EAC86B49ADC}|Teleperformance.DataIngestion.DataAccess\\Teleperformance.DataIngestion.DataAccess.csproj|c:\\users\\user\\desktop\\s\\integration_project\\backend\\teleperformance.dataingestion.api\\teleperformance.dataingestion.dataaccess\\services\\v1.0\\fileloadingprocessconfigurationservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{687FE9FE-18D5-47E8-B8D3-8EAC86B49ADC}|Teleperformance.DataIngestion.DataAccess\\Teleperformance.DataIngestion.DataAccess.csproj|solutionrelative:teleperformance.dataingestion.dataaccess\\services\\v1.0\\fileloadingprocessconfigurationservice.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 2,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "FileLoadingProcessConfigurationService.cs",
+              "DocumentMoniker": "C:\\Users\\user\\Desktop\\s\\Integration_Project\\Backend\\Teleperformance.DataIngestion.API\\Teleperformance.DataIngestion.DataAccess\\Services\\v1.0\\FileLoadingProcessConfigurationService.cs",
+              "RelativeDocumentMoniker": "Teleperformance.DataIngestion.DataAccess\\Services\\v1.0\\FileLoadingProcessConfigurationService.cs",
+              "ToolTip": "C:\\Users\\user\\Desktop\\s\\Integration_Project\\Backend\\Teleperformance.DataIngestion.API\\Teleperformance.DataIngestion.DataAccess\\Services\\v1.0\\FileLoadingProcessConfigurationService.cs",
+              "RelativeToolTip": "Teleperformance.DataIngestion.DataAccess\\Services\\v1.0\\FileLoadingProcessConfigurationService.cs",
+              "ViewState": "AgIAABcBAAAAAAAAAAAhwOQAAABYAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-24T16:07:44.1Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "ImportController.cs",
+              "DocumentMoniker": "C:\\Users\\user\\Desktop\\s\\Integration_Project\\Backend\\Teleperformance.DataIngestion.API\\Teleperformance.DataIngestion.API\\Controllers\\v3.0\\ImportController.cs",
+              "RelativeDocumentMoniker": "Teleperformance.DataIngestion.API\\Controllers\\v3.0\\ImportController.cs",
+              "ToolTip": "C:\\Users\\user\\Desktop\\s\\Integration_Project\\Backend\\Teleperformance.DataIngestion.API\\Teleperformance.DataIngestion.API\\Controllers\\v3.0\\ImportController.cs",
+              "RelativeToolTip": "Teleperformance.DataIngestion.API\\Controllers\\v3.0\\ImportController.cs",
+              "ViewState": "AgIAAA8AAAAAAAAAAAAAACcAAAA7AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-24T15:03:15.382Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "ImportController.cs",
+              "DocumentMoniker": "C:\\Users\\user\\Desktop\\s\\Integration_Project\\Backend\\Teleperformance.DataIngestion.API\\Teleperformance.DataIngestion.API\\Controllers\\v1.0\\ImportController.cs",
+              "RelativeDocumentMoniker": "Teleperformance.DataIngestion.API\\Controllers\\v1.0\\ImportController.cs",
+              "ToolTip": "C:\\Users\\user\\Desktop\\s\\Integration_Project\\Backend\\Teleperformance.DataIngestion.API\\Teleperformance.DataIngestion.API\\Controllers\\v1.0\\ImportController.cs",
+              "RelativeToolTip": "Teleperformance.DataIngestion.API\\Controllers\\v1.0\\ImportController.cs",
+              "ViewState": "AgIAACMAAAAAAAAAAAAkwCUAAAA7AAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2026-06-24T15:03:03.92Z",
+              "EditorCaption": ""
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

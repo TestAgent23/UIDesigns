@@ -1,0 +1,16 @@
+{
+  "routes": [
+    {
+      "route": "/",
+      "serve": "/index.html"
+    }      
+  ],
+  "globalHeaders": {
+    "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
+    "Content-Security-Policy": "default-src 'self'  https://app.powerbi.com; script-src 'self' 'unsafe-inline' https://alcdn.msauth.net https://secure.aadcdn.microsoftonline-p.com; connect-src 'self' https://login.microsoftonline.com https://graph.microsoft.com https://tpservices.teleperformanceusa.com api.dataingestion.dev.ontp.app; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; frame-ancestors 'self' https://dataingestion.dev.ontp.app;",
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "strict-origin-when-cross-origin",
+    "Permissions-Policy": "geolocation=(), camera=(), microphone=()"
+  }
+}

@@ -1,0 +1,278 @@
+.content {
+  display: flex;
+  height: 100%;
+  width: 100%;
+}
+
+#processListPage {
+  padding: 20px;
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.sm-font {
+  font-size: 22px !important;
+}
+
+textarea {
+  width: 500px;
+  height: 50px;
+}
+
+.process-list-title {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.process-list-panel {
+  flex: 1;
+  background: #fff;
+  padding: 10px;
+  border-radius: 5px;
+  overflow: auto;
+  min-height: 80vh;
+}
+
+.table-details {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+}
+
+.data-count {
+  display: flex;
+  width: fit-content;
+  height: fit-content;
+}
+
+.table-actions {
+  display: flex;
+  width: fit-content;
+  height: fit-content;
+}
+
+/* Search Bar */
+.search-bar {
+  border-radius: 4px;
+  border: 1px solid #bfbfbf;
+  display: flex;
+  width: fit-content;
+  padding: 3px 16px;
+  height: 40px;
+  position: relative;
+}
+
+.search-bar:focus-within {
+  box-shadow: 1px 1px 2px 2px rgba(8, 155, 255, 0.10);
+}
+
+.search-bar:focus-within .search-text {
+  opacity: 1;
+}
+
+.search-text {
+  font-family: "Noto Sans", sans-serif !important;
+  border: none;
+  height: 20px;
+  align-self: center;
+  font-size: 14px;
+  width: 100%;
+  padding-right: 30px;
+  border: none;
+  outline: none;
+}
+
+.search-action {
+  border: none;
+  background: transparent;
+  position: absolute;
+  /* right: 16px; */
+  right: 0px;
+  top: 5px;
+  height: 24px;
+  color: #2e2e2e;
+  transition: all 0.2s ease-in;
+}
+
+/*   
+  .search-bar:focus-within .search {
+    opacity: 0;
+  } */
+
+/* .search-action.search {
+    opacity: 1;
+  } */
+
+.search-bar:focus-within .refresh {
+  opacity: 1;
+}
+
+.search-action.refresh {
+  opacity: 0;
+}
+
+
+#viewLog {
+  background: var(--grey-1);
+  border-style: solid;
+  border-color: var(--grey-4);
+  border-width: 0px 1px 0px 1px;
+  display: none;
+  opacity: 0;
+}
+
+#viewLog.open {
+  display: flex !important;
+  flex-direction: column;
+  height: 100%;
+  width: 500px;
+  min-width: 500px;
+  display: block;
+  opacity: 1;
+  position: absolute;
+  right: 0;
+  box-shadow: 0px 4px 10px 0px rgba(0, 0, 0, 0.2);
+z-index:9;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  padding: 20px 15px;
+  background-color: #ececec;
+}
+
+.close-icon {
+  cursor: pointer;
+}
+
+.panel-body {
+  flex: 1;
+  height: 100%;
+  overflow: auto;
+  padding: 20px 15px;
+}
+
+.file-icon {
+  padding-right: 8px;
+}
+
+.file-icon>img {
+  width: 28px;
+}
+
+.file-name {
+  font-weight: 600;
+}
+
+.new {
+  display: flex;
+  align-items: center;
+  padding: 4px 16px;
+  height: 32px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.new>i {
+  margin-right: 8px;
+  font-size: 22px;
+}
+
+.refresh-btn {
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: var(--grey-6);
+  border-radius: 4px;
+  margin-left: 8px;
+}
+
+.refresh-btn:hover {
+  background: var(--grey-7);
+}
+
+#daterange {
+  position: relative;
+  min-width: 220px;
+  height: fit-content;
+  margin-right: 10px;
+}
+
+/* #daterange:active,
+#daterange:focus,
+#daterange:had(.inputwrapper-focus) {
+  border: 1px solid red;
+} */
+
+#search {
+  position: relative;
+  min-width: 220px;
+  height: 40px;
+  margin-right: 10px;
+}
+
+#search>.form-control {
+  height: inherit;
+}
+
+.clear {
+  position: absolute;
+  right: 6px;
+  /* background-color: white; */
+  cursor: pointer;
+  top: 12px;
+}
+
+.min-220 {
+  min-width: 220px;
+}
+
+.clear i {
+  font-size: 18px;
+}
+
+.icon-btn {
+  height: 40px;
+  width: 40px;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.no-data {
+  height: 150px;
+  margin: 20px;
+}
+
+.semibold{
+  font-weight: 600;
+}
+
+::ng-deep .ng-select-container {
+  height: 40px !important;
+}
+
+@media screen and (max-width: 680px) {
+  .table-actions {
+    display: flex;
+    width: fit-content;
+    flex-direction: column;
+  }
+#viewLog.open{width: 100% !important;
+        min-width: 250px !important;
+        max-width: 375px !important;}
+  ::ng-deep span.p-calendar {
+    width: 100%;
+  }
+
+  #daterange {
+    margin-bottom: 10px;
+  }
+}

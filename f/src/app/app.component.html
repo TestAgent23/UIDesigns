@@ -1,0 +1,36 @@
+<!-- <ngx-spinner  [fullScreen]="true">
+
+</ngx-spinner> -->
+<ngx-spinner id="loaderDiv" type="custom" [fullScreen]="true"
+
+  template="<div class='loading'> 
+    <div class='icon-tpicon TPicon-purple'>
+      <img src='logo-white.png' class='loader-logo' />
+      <div 
+  class='spinner-border text-primary-purple' role='status'>
+</div></div></div>"
+>
+
+</ngx-spinner>
+<!-- <div id="loaderDiv" class="loading d-none">
+  <div class="icon-tpicon TPicon-purple">
+    <img src="tp-loader.png" class="loader-logo" alt="">
+    <div class="spinner-border text-primary-purple" role="status">
+    </div>
+  </div>
+</div> -->
+  
+<div>
+  @if (!isLogin) {
+<div>
+    <app-login [loggedIn]="authService.loggedIn" (loginClicked)="login()" (logoutClicked)="logout()"></app-login>    
+  </div>
+}
+
+  @if (isLogin && isLoad) {
+<div>
+    <app-main-layout [accessPermission]="accessPermission"></app-main-layout>   
+  </div>
+}  
+
+</div>

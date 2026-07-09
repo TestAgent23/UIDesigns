@@ -1,0 +1,13 @@
+SET NOCOUNT ON;
+GO
+
+CREATE OR ALTER FUNCTION dbo.fn_decrypt (@encryped VARBINARY(MAX))
+RETURNS VARCHAR(MAX)
+AS
+BEGIN
+    IF @encryped IS NULL
+        RETURN NULL;
+
+    RETURN TRY_CONVERT(VARCHAR(MAX), @encryped);
+END;
+GO

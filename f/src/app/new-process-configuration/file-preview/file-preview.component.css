@@ -1,0 +1,115 @@
+#formFile {
+  width: 98px;
+  color: transparent;
+  border-radius: 4px 0px 0px 4px !important;
+  z-index: 1;
+}
+
+.background-gray {
+  background-color: #e1e1e1;
+  padding: 10px;
+  border-radius: 5px;
+  margin-bottom: 10px
+}
+
+input.text-upload {
+  width: 100%;
+  border-width: 0px;
+  background: transparent;
+  outline: none;
+  padding-left: 3px;
+  color: green;
+}
+
+.upload {
+  max-width: 200px;
+  font-size: 12px;
+}
+
+/* .overflow-auto{overflow:auto; max-height:351px;} */
+.overflow-x {
+  /* overflow-x: auto; */
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+#uploadPanel {
+  flex: 1;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+#fileUploadPage {
+  height: 100%;
+  width: 100%;
+  display: flex;
+}
+
+.slide-left {
+  opacity: 1 !important;
+  -webkit-animation: slide-in 0.5s forwards;
+  -webkit-animation-delay: 2s;
+  animation: slide-in 0.5s forwards;
+  animation-delay: 2s;
+
+}
+
+#modifySettings {
+  background: var(--grey-1);
+  border-style: solid;
+  border-color: var(--grey-4);
+  border-width: 0px 1px 0px 1px;
+  /* padding: 20px 15px; */
+  display: block;
+  opacity: 0;
+}
+
+#modifySettings.open {
+  display: flex !important;
+  flex-direction: column;
+  height: 100%;
+  /* min-width: 25%; */
+  width: 500px;
+  overflow-x: auto;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  padding: 20px 15px 0px;
+}
+
+.close-icon {
+  cursor: pointer;
+}
+
+.ng-star-inserted {
+  padding: 0px !important;
+  align-content: center !important;
+}
+
+.base-setting,
+.button-section {
+  padding: 0 15px 10px;
+}
+
+
+.fixTableHead {
+  overflow-y: auto;
+  /* height: 110px; */
+  flex: 1;
+    max-height: calc(100% - 25px);
+}
+
+.table-striped>tbody>tr:nth-of-type(odd)>* {
+  padding: 5px 0 !important;
+}
+
+.fixTableHead thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1 !important;
+}

@@ -1,0 +1,68 @@
+.notification {
+    display: flex;
+    flex-direction: column;
+}
+
+.notification.success-notif .icon-error,
+.notification.error-notif .icon-success {
+    display: none;
+}
+
+
+.notif-header {
+    padding: 20px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+}
+
+
+.icon-error {
+    background-color: #ffcfcf;
+    width: 50px;
+    height: 50px;
+    border-radius: 100%;
+    padding: 10px;
+    outline: 5px solid #ffe5e5;
+    color: var(--error-button);
+    margin: 5px;
+}
+
+.icon-error > i,
+.icon-success > i {
+    font-size: 30px;
+}
+
+
+.icon-success {
+    background-color: #aef7d9;
+    width: 50px;
+    height: 50px;
+    border-radius: 100%;
+    padding: 10px;
+    outline: 5px solid #defff2;
+    color: var(--success-4);
+    margin: 5px;
+}
+
+.notif-body {
+    padding: 0px 20px 30px;
+}
+
+.notif-title {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.notif-message {
+    padding-top: 5px;
+    letter-spacing: 0.5px;
+}
+
+.notif-footer {
+    background-color: var(--grey-3);
+    padding: 10px;
+    border-radius: 0px 0px 10px 10px;
+    text-align: center;
+}

@@ -1,0 +1,29 @@
+.error-box {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: #fdecea;
+    border: 1px solid #f5c2c0;
+    color: #b71c1c;
+    padding: 12px 14px;
+    border-radius: 4px;
+    
+    font-size: 14px;
+}
+
+.error-text {
+    margin-right: 12px;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    color: #b71c1c;
+    font-size: 18px;
+    cursor: pointer;
+    line-height: 1;
+}
+
+.close-btn:hover {
+    color: #7f0000;
+}

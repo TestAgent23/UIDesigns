@@ -1,0 +1,338 @@
+#topBar {
+    height: 48px;
+    background-color: var(--grey-1);
+    box-shadow: 0px 10px 15px 0px rgba(149, 157, 165, 0.35);
+    z-index: 99;
+    position: relative;
+    padding: 8px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.w-100{width:100%}
+#sideMenu li a.pdm-trigger.drop{gap:0 !important; }
+.dd a, .dd a{height: 43px !important; padding: 10px !important;  background-color: #ffffff; color:#2E2E2E}
+.dd a:hover{height: 43px !important; padding: 10px !important;  background-color: #E6E6E6; color:#2E2E2E}
+.edit-icon{color:#cf7ba6 !important;}
+.top-left,
+.top-right {
+    display: flex;
+    align-items: center;
+}
+.menu {
+    border: none;
+    background-color: transparent;
+    padding: 0px;
+    margin-right: 16px;
+    display: flex;
+    align-items: center;
+}
+
+
+#container {
+    height: calc(100vh - 48px);
+    width: 100%;
+    display: flex;
+}
+
+
+/*******SIDEBAR********/
+
+#sideBar {
+    width: 58px;
+    height: 100%;
+    background-color: var(--grey-1);
+    display: flex;
+    flex-direction: column;
+    transition: all 0.3s;
+}
+
+#sideMenu {
+    list-style-type: none;
+    padding: 16px 8px;
+    flex: 1;
+    transition: all 0.3s;
+}
+#sideMenu > li {
+    height: 40px;
+    width: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 8px;
+}
+#sideMenu > li a {
+    color: #2E2E2E;
+    height: 24px;
+    text-decoration: none;
+    font-weight: 500;
+    display: flex
+}
+#sideMenu > li:has(a:hover),
+#sideMenu > li:has(a.highlight) {
+    background-color: #E6E6E6;
+    border-radius: 4px;
+}
+
+#sideMenu > li:has(a.active) {
+    background-color: #EEF2FF;
+    border-radius: 4px;
+    box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+#sideMenu > li > a > span {
+    /* display: none; */
+    visibility: hidden;
+    opacity: 0;
+    width: 0px;
+    transition: all;
+}
+
+
+#sideBar.expanded,
+#sideBar.expanded > #sideMenu{
+    width: 250px;
+}
+
+#sideBar.expanded #sideMenu > li  {
+    width: 100%;
+    justify-content: left;
+}
+
+#sideBar.expanded #sideMenu > li > a {
+    width: 100%;
+    display: flex;
+    justify-content: left;
+    padding: 0px 8px;
+}
+
+#sideBar.expanded #sideMenu > li > a > span {
+    /* display: inherit; */
+    opacity: 1;
+    visibility: visible;
+    margin-left: 8px;
+    width: 100%;
+    overflow: hidden;
+    text-overflow: clip;
+    transition: visibility, opacity, width;
+    transition-delay: 0.1s;
+    transition-duration: 0.3s;
+}
+
+
+
+
+#footer {
+    padding: 8px;
+    background-color: var(--grey-13);
+    color: var(--grey-1);
+    letter-spacing: 0.5px;
+}
+
+#footer > .default {
+    text-align: center;
+    margin: 0 auto;
+    width: fit-content;
+}
+
+#sideBar.expanded #footer > .default {
+    /* display: none; */
+    opacity: 0;
+    visibility: hidden;
+    width: 0px;
+    height: 0px;
+    transition: all;
+    transition-delay: 0.3s;
+    transition-duration: 0.3s;
+
+}
+
+#footer > .full {
+    /* display: none; */
+    opacity: 0;
+    visibility: hidden;
+    width: 0px;
+    height: 0px;
+    overflow: hidden;
+    text-overflow: clip;
+    transition: all;
+    transition-delay: 0s;
+    transition-duration: 0s;
+}
+
+
+#sideBar.expanded #footer > .full  {
+    /* display: inherit; */
+    opacity: 1;
+    visibility: visible;
+    width: fit-content;
+    height: 30px;
+    overflow: hidden;
+    text-overflow: clip;
+    transition: all;
+    transition-delay: 0.3s;
+    transition-duration: 0.3s;
+}
+
+#sideBar #footer > .default   {
+    /* display: inherit; */
+    opacity: 1;
+    visibility: visible;
+    width: fit-content;
+    height: 25px;
+    transition: all;
+    transition-delay: 0s;
+    transition-duration: 0.3s;
+}
+
+
+
+
+#pageContent {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+
+/*******TOPBAR********/
+#user {
+    width: 32px;
+    height: 32px;
+    border-radius: 32px;
+}
+
+.user-pic,
+.user-pic > img {
+    height: inherit;
+    border-radius: inherit;
+}
+
+.user-pic.dropdown-toggle::after {
+    display: none;
+}
+
+.user-pic.show,
+.user-pic.show:hover {
+    cursor: pointer;
+    outline: 5px solid #DDE4F8;
+    border-radius: inherit;
+}
+
+.user-pic:hover {
+    cursor: pointer;
+    outline: 5px solid #e6e6e6;
+    border-radius: inherit;
+}
+
+#user > .dropdown-menu.show {
+    margin-top: 5px !important;
+    margin-right: -5px !important;
+    border-radius: 10px;
+    min-width: 400px;
+    border: 6px solid #DDE4F8;
+    box-shadow: 0px 0px 4px 2px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+}
+
+.dropdown-user-pic {
+    height: 65px;
+    width: 65px;
+    border-radius: 100%;
+}
+
+.dropdown-user-pic > img {
+    height: inherit;
+    border-radius: inherit;
+}
+
+.fullname {
+    font-size: 22px;
+    font-weight: 600;
+}
+
+.company {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--grey-11);
+}
+
+.email {
+    font-weight: 400 !important;
+    color: var(--grey-10);
+}
+
+.signout {
+    background-color: #ffebee;
+    color: #f00028;
+    border: none;
+    display: flex;
+    padding: 8px 15px;
+    border-radius: 5px;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    margin: 25px 0 0 auto;
+}
+
+.signout > i {
+    font-size: 22px;
+}
+
+.signout:hover {
+    background-color: #ffdee3;
+    border-color: transparent;
+    color: #f00028
+}
+
+.signout:active {
+    background-color: #ffd1d9;
+    border-color: transparent;
+    color: #f00028
+}
+.w-30{width:30px; margin-right: 15px !important;}
+#pageContent{overflow: auto;}
+.w-25px{width:25px !important;}
+
+@media screen and (max-width: 767px) {
+    .logo{max-width:150px;}
+}
+@media screen and (max-width: 1080px) {
+#sideBar.expanded #sideMenu > li > a > span{display: none;}
+#sideBar.expanded, #sideBar.expanded > #sideMenu{width:0px !important;  display: none;}
+#sideBar, #sideBar > #sideMenu{width:58px !important;}
+}
+
+
+
+/* Make submenu stack *below* with a slight indent */
+.submenu {
+  margin: 4px 0 8px 36px; /* indent under the PDM line; adjust to taste */
+  padding: 0;
+  list-style: none;
+}
+
+.pdm-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.pdm-trigger > span {
+  flex: 1;
+}
+
+.chevron {
+  transition: transform 160ms ease;
+}
+.chevron.rotate {
+  transform: rotate(180deg);
+}
+
+/* Optional: highlight open state of PDM */
+li.open > .pdm-trigger {
+  background: rgba(255,255,255,0.06);
+  border-radius: 4px;
+}
+

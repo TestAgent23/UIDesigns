@@ -1,0 +1,404 @@
+
+<div class="module-title">Module : {{currentNodeSelected?.name}}</div>
+
+<div class="input-group mb-3 request-row">
+    <select class="method-select" [(ngModel)]="selectedNodeProperties.httpMethod" (change)="onMethodChange($event)">
+        <option value="POST">POST</option>
+        <option value="GET">GET</option>
+    </select>
+    <input type="text" class="form-control" aria-label="Enter URL or describe the request"
+        placeholder="Enter URL or describe the request" (change)="onURLChange($event)"
+        [(ngModel)]="selectedNodeProperties.stringURL">
+    <button type="button" class="btn btn-primary btn-sm"
+        [disabled]="selectedNodeProperties.stringURL.trim().length === 0" (click)="onSelectedNodeSend()">SEND</button>
+</div>
+<hr>
+<section class="tab-setting">
+    <div class="d-flex">
+        <div style="width: 100%;">
+            <ul class="nav nav-tabs" id="myTab" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="params-tab" data-bs-toggle="tab"
+                        [ngClass]="{'active':activeTab === 'params'}" data-bs-target="#params-tab-pane" type="button"
+                        role="tab" aria-controls="params-tab-pane" (click)="onTabChange('params')"
+                        [ariaSelected]="activeTab === 'params'">Params</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="client-tab" data-bs-toggle="tab" data-bs-target="#client-tab-pane"
+                        [ngClass]="{'active':activeTab === 'authorization'}" type="button" role="tab"
+                        aria-controls="client-tab-pane" (click)="onTabChange('authorization')"
+                        [ariaSelected]="activeTab === 'authorization'">Authorization</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="headers-tab" data-bs-toggle="tab"
+                        [ngClass]="{'active':activeTab === 'headers'}" data-bs-target="#headers-tab-pane" type="button"
+                        role="tab" aria-controls="headers-tab-pane" (click)="onTabChange('headers')"
+                        [ariaSelected]="activeTab === 'headers'">Headers</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="body-tab" data-bs-toggle="tab" data-bs-target="#body-tab-pane"
+                        [ngClass]="{'active':activeTab === 'body'}" type="button" role="tab"
+                        aria-controls="body-tab-pane" [ariaSelected]="activeTab === 'body'"
+                        (click)="onTabChange('body')">Body</button>
+                </li>
+                @if (selectedNodeProperties?.responseStatus !== '' && selectedNodeProperties?.responseStatus !== undefined) {
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link response-tab-button" id="response-tab" data-bs-toggle="tab" data-bs-target="#response-tab-pane"
+                        [ngClass]="{'active':activeTab === 'response', 'response-ready': hasUnreadResponse}" type="button" role="tab"
+                        aria-controls="response-tab-pane" [ariaSelected]="activeTab === 'response'"
+                        (click)="onTabChange('response')">
+                        Response
+                        @if (hasUnreadResponse) {
+                        <span class="response-notice-dot" aria-hidden="true"></span>
+                        }
+                    </button>
+                </li>
+                }
+            </ul>
+
+            <div class="tab-content property-window" id="propertyWindow">
+
+                <div [attr.class]="activeTab === 'params' ? 'tab-pane fade show active' : 'tab-pane fade show'"
+                    id="params-tab-pane" role="tabpanel" aria-labelledby="params-tab" tabindex="0">
+                    <table>
+                        <tr>
+                            <th></th>
+                            <th>Key</th>
+                            <th>Value</th>
+                            <th>Description</th>
+                        </tr>
+                        <tr *ngFor="let row of selectedNodeProperties.nodeParams; let i = index">
+                            <td>
+                                <input type="checkbox" [(ngModel)]="row.willInclude" [checked]="row.willInclude">
+                            </td>
+                            <td>
+                                <input type="text" [(ngModel)]="row.key"
+                                    (ngModelChange)="onInputChange('params',i, $event, 'key')">
+                            </td>
+                            <td>
+                                <input type="text" [(ngModel)]="row.value"
+                                    (ngModelChange)="onInputChange('params',i, $event, 'value')">
+                            </td>
+                            <td>
+                                <input type="text" [(ngModel)]="row.description"
+                                    (ngModelChange)="onInputChange('params',i, $event, 'description')">
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div [attr.class]="activeTab === 'authorization' ? 'tab-pane fade show active' : 'tab-pane fade '"
+                    id="authorization-tab-pane" role="tabpanel" aria-labelledby="authorization-tab" tabindex="0">
+                    <div class="authorization-container">
+                        <div class="authorization-side">
+                            <label for="authType">Auth Type</label>
+                            <select name="" id="authType" [(ngModel)]="selectedNodeProperties.authorization.authType"
+                                (change)="onAuthTypeChange($event)">
+                                <option *ngFor="let authType of authTypes" [value]="authType">{{authType}}
+                                </option>
+                            </select>
+                        </div>
+                        <div class="authorization-content">
+                            @if (selectedNodeProperties?.authorization?.authType?.toLowerCase() === 'basic auth') {
+                            <div>
+                                <div class="row mb-3">
+                                    <label for="inputUsername" class="col-sm col-form-label">Username</label>
+                                    <div class="col-sm-10">
+                                        <input type="username" class="form-control" id="inputUsername"
+                                            [(ngModel)]="selectedNodeProperties.authorization.userName">
+                                    </div>
+                                </div>
+                                <div class="row mb-3">
+                                    <label for="authPassword" class="col-sm col-form-label">Password</label>
+                                    <div class="col-sm-10 password-wrapper">
+                                        <input type="password" class="form-control" id="authPassword"
+                                            [(ngModel)]="selectedNodeProperties.authorization.password">
+                                        <span class="material-symbols-outlined visiblity toggle-eye"
+                                            (click)="onShowPassword('authPassword',$event)">visibility</span>
+                                    </div>
+                                </div>
+                            </div>
+                            }
+                            @if (selectedNodeProperties?.authorization?.authType?.toLowerCase() === 'no auth') {
+                            <div>
+                                <div class="col">No Auth</div>
+                                <div class="col">This request does not use any authorization.</div>
+                            </div>
+                            }
+                            @if (selectedNodeProperties?.authorization?.authType?.toLowerCase() === 'bearer token') {
+                            <div>
+                                <div class="row">
+                                    <label for="" class="col-form-label">Token</label>
+                                </div>
+                                <div class="row">
+                                    <div class="password-wrapper">
+                                        <input type="password" id="bearerToken_{{selectedNodeProperties.id}}"
+                                            class="form-control"
+                                            [(ngModel)]="selectedNodeProperties.authorization.bearerToken">
+                                        <span class="material-symbols-outlined visiblity toggle-eye"
+                                            (click)="onShowPassword('bearerToken',$event)">visibility</span>
+                                    </div>
+                                </div>
+                            </div>
+                            }
+
+                        </div>
+                    </div>
+                </div>
+
+                <div [attr.class]="activeTab === 'headers' ? 'tab-pane fade show active' : 'tab-pane fade '"
+                    id="headers-tab-pane" role="tabpanel" aria-labelledby="headers-tab" tabindex="0">
+                    <table>
+                        <tr>
+                            <th></th>
+                            <th>Key</th>
+                            <th>Value</th>
+                            <th>Description</th>
+                        </tr>
+                        <tr *ngFor="let row of selectedNodeProperties.headers; let i = index">
+                            <td>
+                                <input type="checkbox" [(ngModel)]="row.willInclude" [checked]="row.willInclude">
+                            </td>
+                            <td>
+                                <input type="text" [(ngModel)]="row.key"
+                                    (ngModelChange)="onInputChange('headers',i, $event, 'key')">
+                            </td>
+                            <td>
+                                @if (!selectedNodeProperties?.showResponses) {
+                                <input type="text" [(ngModel)]="row.value"
+                                    (ngModelChange)="onInputChange('headers',i, $event, 'value')">
+                                } @else {
+                                <div class="header-value-row">
+                                    <input class="prefix-input" type="text" placeholder="Prefix"
+                                        [(ngModel)]="selectedNodeProperties.headers[i].prefix"
+                                        (ngModelChange)="onSelect('headers', null, i)">
+                                    <ng-select [items]="nodeResponses" bindValue="key" bindLabel="key"
+                                        groupBy="nodeName" [addTag]="handleAddTag"
+                                        (change)="onSelect('headers',$event, i)" class="header-response-select">
+                                    </ng-select>
+                                </div>
+                                }
+                            </td>
+                            <td>
+                                <input type="text" [(ngModel)]="row.description"
+                                    (ngModelChange)="onInputChange('headers',i, $event, 'description')">
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+
+                <div [attr.class]="activeTab === 'body' ? 'tab-pane fade show active' : 'tab-pane fade '"
+                    id="body-tab-pane" role="tabpanel" aria-labelledby="body-tab" tabindex="0">
+
+                    <div class="horizontal-radio-list">
+                        <label for="bodyOptions">
+                            <input type="radio" name="options" value="none" id="bodyOptions"
+                                (click)="onBodyTypeChange('none-body')" [checked]="activeBodyName === 'none-body'">
+                            none
+                        </label>
+                        <label for="formDataoptions">
+                            <input type="radio" name="options" id="formDataoptions" value="form-data"
+                                (click)="onBodyTypeChange('form-data')" [checked]="activeBodyName === 'form-data'">
+                            form-data
+                        </label>
+                        <label for="xwwwOptions">
+                            <input type="radio" name="options" id="xwwwOptions" value="x-www-form-urlencoded"
+                                (click)="onBodyTypeChange('x-www-form-urlencoded')"
+                                [checked]="activeBodyName === 'x-www-form-urlencoded'">
+                            x-www-form-urlencoded
+                        </label>
+                        <label for="rawOptions">
+                            <input type="radio" name="options" id="rawOptions" value="x-www-form-urlencoded"
+                                (click)="onBodyTypeChange('raw')" [checked]="activeBodyName === 'raw'">
+                            raw
+                        </label>
+                    </div>
+
+                    <div class="content-box body-window" id="bodyWindow">
+
+                        @if (activeBodyName === 'none-body') {
+                        <div class="tab-pane fade show active" role="tabpanel" aria-labelledby="none-tab" tabindex="0">
+                            This request does not have a body
+                        </div>
+                        }
+
+                        @if (activeBodyName === 'form-data') {
+                        <div class="tab-pane fade show active" role="tabpanel" aria-labelledby="form-data-tab" tabindex="0">
+                            <table>
+                                <tr>
+                                    <th></th>
+                                    <th>Key</th>
+                                    <th>Value</th>
+                                    <th>Description</th>
+                                </tr>
+                                <tr *ngFor="let row of selectedNodeProperties.body?.formData; let i = index">
+                                    <td>
+                                        <input type="checkbox" [(ngModel)]="row.willInclude"
+                                            [checked]="row.willInclude">
+                                    </td>
+                                    <td>
+                                        <input type="text" [(ngModel)]="row.key"
+                                            (ngModelChange)="onInputBodyChange('formData',i, $event, 'key')">
+                                    </td>
+                                    <td>
+                                        <input type="text" [(ngModel)]="row.value"
+                                            (ngModelChange)="onInputBodyChange('formData',i, $event, 'value')">
+                                    </td>
+                                    <td>
+                                        <input type="text" [(ngModel)]="row.description"
+                                            (ngModelChange)="onInputBodyChange('formData',i, $event, 'description')">
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        }
+
+                        @if (activeBodyName === 'x-www-form-urlencoded') {
+                        <div
+                            class="tab-pane fade show active"
+                            role="tabpanel" aria-labelledby="x-www-form-urlencoded-tab" tabindex="0">
+                            <table>
+                                <tr>
+                                    <th></th>
+                                    <th>Key</th>
+                                    <th>Value</th>
+                                    <th>Description</th>
+                                </tr>
+                                <tr *ngFor="let row of selectedNodeProperties.body?.xWWWFormUrlEncoded; let i = index">
+                                    <td>
+                                        <input type="checkbox" [(ngModel)]="row.willInclude"
+                                            [checked]="row.willInclude">
+                                    </td>
+                                    <td>
+                                        <input type="text" [(ngModel)]="row.key"
+                                            (ngModelChange)="onInputBodyChange('xWWWFormUrlEncoded',i, $event, 'key')">
+                                    </td>
+                                    <td>
+                                        <input type="text" [(ngModel)]="row.value"
+                                            (ngModelChange)="onInputBodyChange('xWWWFormUrlEncoded',i, $event, 'value')">
+                                    </td>
+                                    <td>
+                                        <input type="text" [(ngModel)]="row.description"
+                                            (ngModelChange)="onInputBodyChange('xWWWFormUrlEncoded',i, $event, 'description')">
+                                    </td>
+                                </tr>
+                            </table>
+                        </div>
+                        }
+
+                        @if (activeBodyName === 'raw') {
+                        <div class="tab-pane fade show active" role="tabpanel" aria-labelledby="raw-tab" tabindex="0">
+                            <textarea name="txtareadRaw" id="txtareadRaw" (blur)="onFormatJsonInput()"
+                                (paste)="onPasteRaw($event)" [(ngModel)]="selectedNodeProperties.body.raw"
+                                style="width: 100%; height: 100%;"></textarea>
+                        </div>
+                        }
+                    </div>
+                </div>
+
+                <div class="tab-pane fade response-tab-pane"
+                    [class.show]="activeTab === 'response'"
+                    [class.active]="activeTab === 'response'"
+                    id="response-tab-pane" role="tabpanel" aria-labelledby="response-tab" tabindex="0">
+
+                    <div class="response-meta">
+                        <div class="response-status-row">
+                            @if (selectedNodeProperties?.responseStatus !== '' && selectedNodeProperties?.responseStatus !== undefined) {
+                            <span class="response-status-badge"
+                                [class.badge-success]="selectedNodeProperties?.responseStatus === 200"
+                                [class.badge-error]="selectedNodeProperties?.responseStatus !== 200">
+                                {{ selectedNodeProperties?.responseStatus === 200 ? '200 OK' : (selectedNodeProperties?.responseStatus || 'Error') }}
+                            </span>
+                            }
+                            @if (selectedNodeProperties?.responseTime > 0) {
+                            <span class="response-time-chip">
+                                <span class="material-symbols-outlined" style="font-size:14px;">timer</span>
+                                {{ selectedNodeProperties?.responseTime | number:'1.0-0' }} ms
+                            </span>
+                            }
+                        </div>
+                    </div>
+                    <div class="response-scroll-area">
+                        @if (selectedNodeProperties?.responseStatus === 200) {
+                        @let responseTree = buildResponseTree(selectedNodeProperties?.response);
+                        <table class="response-table">
+                            <thead>
+                                <tr>
+                                    <th></th>
+                                    <th>Key</th>
+                                    <th>Value</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @for (treeNode of responseTree; track treeNode.path) {
+                                    <ng-template [ngTemplateOutlet]="responseTreeTemplate"
+                                        [ngTemplateOutletContext]="{ treeNode: treeNode, level: 0 }"></ng-template>
+                                }
+                            </tbody>
+                        </table>
+                        }
+                        @if (selectedNodeProperties?.responseStatus !== 200 && selectedNodeProperties?.responseStatus !== '' && selectedNodeProperties?.responseStatus !== undefined) {
+                        <div class="response-error-box">
+                            <span class="material-symbols-outlined response-error-icon">error</span>
+                            <div class="response-error-body">
+                                <div class="response-error-status">Status: {{selectedNodeProperties?.responseStatus || 'Client Error'}}</div>
+                                <div class="response-error-message">{{selectedNodeProperties?.response?.message}}</div>
+                                @if (selectedNodeProperties?.response?.url) {
+                                <div class="response-error-url">URL: {{selectedNodeProperties?.response?.url}}</div>
+                                }
+                            </div>
+                        </div>
+                        }
+                    </div>
+
+                    <ng-template #responseTreeTemplate let-treeNode="treeNode" let-level="level">
+                        <tr>
+                            <td></td>
+                            <td>
+                                <div class="d-flex align-items-center gap-2" [style.margin-left.px]="(level ?? 0) * 24">
+                                    @if (treeNode.children.length > 0) {
+                                    <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none"
+                                        (click)="toggleNode(treeNode.path)">
+                                        <span class="material-symbols-outlined" style="font-size: 16px; line-height: 1;">
+                                            {{ toggleMap[treeNode.path] ? 'expand_more' : 'chevron_right' }}
+                                        </span>
+                                    </button>
+                                    } @else {
+                                    <span style="width: 16px;"></span>
+                                    }
+
+                                    @if (treeNode.children.length === 0) {
+                                    <input type="checkbox" id="chk{{treeNode.path}}"
+                                        (click)="onSelectedResponse($event, treeNode.path, treeNode.value)">
+                                    }
+
+                                    <strong>{{treeNode.key}}</strong>
+                                </div>
+                            </td>
+                            @if (treeNode.children.length === 0) {
+                            <td class="response-value-cell">{{treeNode.value}}</td>
+                            }
+                            @if (treeNode.children.length > 0) {
+                            <td>
+                                @if (treeNode.nodeType === 'array') {
+                                <i>[Array] ({{treeNode.childCount}} items)</i>
+                                } @else {
+                                <i>[Object] ({{treeNode.childCount}} keys)</i>
+                                }
+                            </td>
+                            }
+                        </tr>
+                        @if (treeNode.children.length > 0 && toggleMap[treeNode.path]) {
+                        @for (childNode of treeNode.children; track childNode.path) {
+                            <ng-template [ngTemplateOutlet]="responseTreeTemplate"
+                                [ngTemplateOutletContext]="{ treeNode: childNode, level: (level ?? 0) + 1 }">
+                            </ng-template>
+                        }
+                        }
+                    </ng-template>
+                </div>
+            </div>
+        </div>        
+    </div>
+
+</section>
