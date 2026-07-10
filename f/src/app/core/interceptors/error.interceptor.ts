@@ -3,17 +3,16 @@ import {
   HttpEvent,
   HttpHandler,
   HttpInterceptor,
-  HttpInterceptorFn,
-  HttpRequest,
+  HttpRequest
 } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { Router } from '@angular/router';
-import { BehaviorSubject, Observable, catchError, filter, switchMap, take, throwError } from 'rxjs';
 import { ToastrService } from 'ngx-toastr';
+import { BehaviorSubject, Observable, catchError, filter, switchMap, take, throwError } from 'rxjs';
+import { API_Upload_Compent } from '../models/contextTokens';
 import { AuthService } from '../services/auth.service';
 import { LoginService } from '../services/login.service';
 import { TokenService } from '../services/token.service';
-import { API_Upload_Compent } from '../models/contextTokens';
 
 // export const errorInterceptor: HttpInterceptorFn = (req, next) => {
 //   return next(req);
@@ -55,7 +54,7 @@ export class ErrorInterceptor implements HttpInterceptor {
              throw error;
             }
             // ------------------------
-            // Handle 400 errors 
+            // Handle 400 errors
             // ------------------------
             if (error.status === 400) {
               if (error.error.errors) {
@@ -66,7 +65,7 @@ export class ErrorInterceptor implements HttpInterceptor {
             }
 
             // ------------------------
-            // Handle 401 errors 
+            // Handle 401 errors
             // ------------------------
             if (error) {
               if (error.status === 401) {
@@ -94,7 +93,7 @@ export class ErrorInterceptor implements HttpInterceptor {
                         });
                         return next.handle(retryReq);
                       }
-                    } 
+                    }
                     // ------------------------
                     //  CASE 2: TOKEN EXPIRED
                     // ------------------------

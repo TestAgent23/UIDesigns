@@ -1,16 +1,16 @@
-import { ChangeDetectorRef, Component, EventEmitter, HostBinding, NgZone, OnDestroy, OnInit, Output, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ChangeDetectorRef, Component, EventEmitter, HostBinding, NgZone, OnDestroy, OnInit, Output, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { SelectDropDownModule, SelectDropDownService } from 'ngx-select-dropdown';
 import { NgApexchartsModule } from 'ng-apexcharts';
+import { SelectDropDownModule, SelectDropDownService } from 'ngx-select-dropdown';
+import { Subject, Subscription, debounceTime, distinctUntilChanged } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { MODULE_BRANDING, WC_CONNECTORS, spFileCountLabel, spLibraryCountLabel, spSiteCountLabel } from '../core/workspace-connect.messages';
-import { SHAREPOINT_ENV } from '../core/workspace-connect.types';
-import { WorkspaceConnectIconComponent, SharepointLogoComponent, WorkspaceConnectStatusAlertsComponent, type SpIconName } from '../core/workspace-connect.ui';
 import { WorkspaceConnectTenantHierarchyComponent } from '../core/workspace-connect-tenant-hierarchy.component';
-import { ApplicationCatalog, ApplicationDto, ApplicationTypeCode, ApplicationTypeDto, ExternalSiteConnectivityResultDto, SharePointLibraryDto, SiteConnectivityCheckRequest } from '../core/workspace-connect.types';
-import { applicationFormFromDto, applicationSiteCount, APPLICATION_TYPE_ID, applicationTypeByCode, applicationTypeById, applicationTypeCodeFromId, applicationTypeDisplayName, awaitApi, buildCurlCommands, curlScriptFilename, delay, downloadCurlScript, emptyApplicationForm, emptyApplicationSite, parseApiError, parseSharePointSiteUrl, partitionRegisteredSites, pickDefaultLibraryName, preferredLibraryNames, registrationTypeOptions as buildRegistrationTypeOptions, StatusAlerts, type ApplicationFormModel, type ApplicationSiteFormModel } from '../core/workspace-connect.utils';
-import { normalizeTenantHierarchyForSave, tenantHierarchySelectionValid, tenantScopeFromSelection, tenantFilterFromScope, writeTenantScope, emptyTenantHierarchySelection, type SharePointTenantHierarchySelection } from '../core/workspace-connect.tenant';
+import { MODULE_BRANDING, WC_CONNECTORS, spFileCountLabel, spLibraryCountLabel, spSiteCountLabel } from '../core/workspace-connect.messages';
+import { emptyTenantHierarchySelection, normalizeTenantHierarchyForSave, tenantFilterFromScope, tenantHierarchySelectionValid, tenantScopeFromSelection, writeTenantScope, type SharePointTenantHierarchySelection } from '../core/workspace-connect.tenant';
+import { ApplicationCatalog, ApplicationDto, ApplicationTypeCode, ApplicationTypeDto, ExternalSiteConnectivityResultDto, SHAREPOINT_ENV, SharePointLibraryDto, SiteConnectivityCheckRequest, WorkspaceDirectoryUserDto } from '../core/workspace-connect.types';
+import { SharepointLogoComponent, WorkspaceConnectIconComponent, WorkspaceConnectStatusAlertsComponent, type SpIconName } from '../core/workspace-connect.ui';
+import { APPLICATION_TYPE_ID, StatusAlerts, applicationFormFromDto, applicationSiteCount, applicationTypeByCode, applicationTypeById, applicationTypeCodeFromId, applicationTypeDisplayName, awaitApi, buildCurlCommands, registrationTypeOptions as buildRegistrationTypeOptions, curlScriptFilename, delay, downloadCurlScript, emptyApplicationForm, emptyApplicationSite, parseApiError, parseSharePointSiteUrl, partitionRegisteredSites, pickDefaultLibraryName, preferredLibraryNames, type ApplicationFormModel, type ApplicationSiteFormModel } from '../core/workspace-connect.utils';
 import { SharePointApiService } from '../services/sharepoint-api.service';
 
 type ConnectivityTestState = 'idle' | 'testing' | 'success' | 'failed';
@@ -21,6 +21,15 @@ interface ConnectivityGlimpse {
   icon: SpIconName;
   label: string;
   value: string;
+}
+
+interface WorkspaceDirectoryUserOption {
+  id: string;
+  label: string;
+  name: string;
+  upn: string;
+  mail: string;
+  avatarSrc: string | null;
 }
 
 const CONNECTIVITY_TEST_MIN_DISPLAY_MS = 5000;
@@ -78,46 +87,29 @@ export class WorkspaceConnectConnectorsComponent implements OnInit, OnDestroy {
   }
 
   readonly tenantChartColors = ['#1d4ed8', '#038387', '#dc2626'];
-
-  get inactiveChartLabel(): string {
-    return WC_CONNECTORS.list.inactiveChartLabel;
-  }
-
-  get tenantChartCategories(): string[] {
-    return this.tenantMonthlyTrend().labels;
-  }
-
-  get tenantChartSeries(): { name: string; data: number[] }[] {
-    const trend = this.tenantMonthlyTrend();
-    return [
-      { name: this.internalTypeLabel, data: trend.internal },
-      { name: this.externalTypeLabel, data: trend.external },
-      { name: this.inactiveChartLabel, data: trend.inactive },
-    ];
-  }
-
-  get tenantChartOptions(): Record<string, unknown> {
-    return {
-      chart: { type: 'bar', height: 168, toolbar: { show: false }, animations: { enabled: true, easing: 'easeinout', speed: 600 } },
-      plotOptions: { bar: { borderRadius: 5, columnWidth: '68%' } },
-      xaxis: {
-        categories: this.tenantChartCategories,
-        labels: { style: { colors: '#64748b', fontSize: '11px', fontWeight: 600 } },
-        axisBorder: { show: false },
-        axisTicks: { show: false },
-      },
-      yaxis: {
-        labels: { style: { colors: '#64748b', fontSize: '11px' } },
-        tickAmount: 4,
-        min: 0,
-        forceNiceScale: true,
-      },
-      grid: { borderColor: 'rgba(226, 232, 240, 0.6)', strokeDashArray: 4 },
-      legend: { position: 'top', horizontalAlign: 'right', fontSize: '11px', fontWeight: 600, markers: { radius: 3 } },
-      dataLabels: { enabled: false },
-      tooltip: { theme: 'light', y: { formatter: (v: number) => `${v} tenant${v === 1 ? '' : 's'}` } },
-    };
-  }
+  readonly inactiveChartLabel = WC_CONNECTORS.list.inactiveChartLabel;
+  tenantChartCategories: string[] = [];
+  tenantChartSeries: { name: string; data: number[] }[] = [];
+  tenantChartOptions: Record<string, unknown> = {
+    chart: { type: 'bar', height: 168, toolbar: { show: false }, animations: { enabled: true, easing: 'easeinout', speed: 600 } },
+    plotOptions: { bar: { borderRadius: 5, columnWidth: '68%' } },
+    xaxis: {
+      categories: [],
+      labels: { style: { colors: '#64748b', fontSize: '11px', fontWeight: 600 } },
+      axisBorder: { show: false },
+      axisTicks: { show: false },
+    },
+    yaxis: {
+      labels: { style: { colors: '#64748b', fontSize: '11px' } },
+      tickAmount: 4,
+      min: 0,
+      forceNiceScale: true,
+    },
+    grid: { borderColor: 'rgba(226, 232, 240, 0.6)', strokeDashArray: 4 },
+    legend: { position: 'top', horizontalAlign: 'right', fontSize: '11px', fontWeight: 600, markers: { radius: 3 } },
+    dataLabels: { enabled: false },
+    tooltip: { theme: 'light', y: { formatter: (v: number) => `${v} tenant${v === 1 ? '' : 's'}` } },
+  };
 
   private tenantMonthlyTrend(): { labels: string[]; internal: number[]; external: number[]; inactive: number[] } {
     const relevant = this.applications.filter((a) =>
@@ -184,16 +176,38 @@ export class WorkspaceConnectConnectorsComponent implements OnInit, OnDestroy {
   connectivityAwaitingGlimpse = false;
   private verifyPhaseTimer: ReturnType<typeof setInterval> | null = null;
   private glimpseTimers: ReturnType<typeof setTimeout>[] = [];
+  ownerUserOptions: WorkspaceDirectoryUserOption[] = [];
+  coOwnerUserOptions: WorkspaceDirectoryUserOption[] = [];
+  ownerUserSearchLoading = false;
+  coOwnerUserSearchLoading = false;
+  ownerUserSearchOpen = false;
+  coOwnerUserSearchOpen = false;
+  private readonly ownerSearchTerms$ = new Subject<string>();
+  private readonly coOwnerSearchTerms$ = new Subject<string>();
+  private readonly userSearchSubscriptions = new Subscription();
+  private ownerSearchSeq = 0;
+  private coOwnerSearchSeq = 0;
 
   ngOnDestroy(): void {
     if (this.siteUrlDebounce) clearTimeout(this.siteUrlDebounce);
     if (this.siteUrlParseFinishTimer) clearTimeout(this.siteUrlParseFinishTimer);
     this.stopVerifyPhaseCycle();
     this.clearConnectivityGlimpses();
+    this.userSearchSubscriptions.unsubscribe();
     this.status.destroy();
   }
 
   async ngOnInit(): Promise<void> {
+    this.userSearchSubscriptions.add(
+      this.ownerSearchTerms$
+        .pipe(debounceTime(260), distinctUntilChanged())
+        .subscribe((term) => { void this.searchWorkspaceUsers('owner', term); }),
+    );
+    this.userSearchSubscriptions.add(
+      this.coOwnerSearchTerms$
+        .pipe(debounceTime(260), distinctUntilChanged())
+        .subscribe((term) => { void this.searchWorkspaceUsers('coOwner', term); }),
+    );
     await this.loadApplicationCatalog();
     this.emitViewChange();
   }
@@ -308,6 +322,62 @@ export class WorkspaceConnectConnectorsComponent implements OnInit, OnDestroy {
     return parts.join(' · ');
   }
 
+  get connectivityPreviewHost(): string {
+    return this.connectivityInlineResult?.hostName?.trim() || this.resolveSiteHost(this.activeSite) || '';
+  }
+
+  get connectivityPreviewSite(): string {
+    return this.connectivityInlineResult?.siteTitle?.trim()
+      || this.connectivityInlineResult?.siteName?.trim()
+      || this.activeSite.siteName.trim()
+      || MODULE_BRANDING.siteLabel;
+  }
+
+  get connectivityPreviewLibraries(): SharePointLibraryDto[] {
+    const libraries = this.connectivityInlineResult?.libraries?.length
+      ? this.connectivityInlineResult.libraries
+      : this.availableLibraries;
+    return libraries.filter((library) => !!library?.name?.trim()).slice(0, 3);
+  }
+
+  get connectivityPreviewStateLabel(): string {
+    if (this.connectivityTestState === 'success' && this.connectivityInlineResult?.isConnected) {
+      return 'Ready';
+    }
+    if (this.connectivityTestState === 'testing') {
+      return 'Checking';
+    }
+    if (this.connectivityTestState === 'failed') {
+      return 'Needs attention';
+    }
+    return 'Awaiting probe';
+  }
+
+  get connectivityPreviewSubtitle(): string {
+    if (this.connectivityTestState === 'success' && this.connectivityInlineResult?.isConnected) {
+      return 'Site access is confirmed. A clean snapshot will appear here.';
+    }
+    if (this.connectivityTestState === 'testing') {
+      return 'We are checking access and preparing a preview.';
+    }
+    if (this.connectivityTestState === 'failed') {
+      return this.connectivityInlineError || this.connectivityInlineResult?.message || WC_CONNECTORS.connectivity.verifyFailedDetail;
+    }
+    return 'Run the check to reveal a polished site snapshot.';
+  }
+
+  get connectivityPreviewSummary(): string {
+    const pieces = [this.connectivityPreviewHost, this.connectivityPreviewSite].filter((piece) => !!piece);
+    if (this.connectivityInlineResult?.isConnected) {
+      pieces.push(`${spLibraryCountLabel(this.connectivityInlineResult.libraryCount)} · ${spFileCountLabel(this.connectivityInlineResult.fileCount)}`);
+    }
+    return pieces.join(' · ');
+  }
+
+  get connectivityPreviewIsLive(): boolean {
+    return this.connectivityTestState === 'success' && !!this.connectivityInlineResult?.isConnected;
+  }
+
   get connectivityAriaLabel(): string {
     const { connectivityTestState: state, connectivityInlineError: err, connectivityInlineResult: result } = this;
     if (state === 'testing') return WC_CONNECTORS.connectivity.ariaTesting(this.connectivityVerifyPhaseLabel, this.connectivityTestTarget);
@@ -372,6 +442,7 @@ export class WorkspaceConnectConnectorsComponent implements OnInit, OnDestroy {
     this.availableLibraries = [];
     this.clearAllSiteConnectivity();
     this.applyDefaultOwner();
+    this.resetUserSearchState();
     this.resetConnectivityTest();
     this.status.clear();
     this.emitViewChange();
@@ -696,13 +767,14 @@ export class WorkspaceConnectConnectorsComponent implements OnInit, OnDestroy {
   }
 
   private applyDefaultOwner(): void {
-    if (this.applicationForm.owner.trim()) return;
-    const name =
-      sessionStorage.getItem('userFullName')?.trim() ||
-      sessionStorage.getItem('FullName')?.trim() ||
-      environment.userFullName?.trim() ||
-      '';
-    if (name) this.applicationForm.owner = name;
+    if (!this.applicationForm.owner.trim()) {
+      const name =
+        sessionStorage.getItem('userFullName')?.trim() ||
+        sessionStorage.getItem('FullName')?.trim() ||
+        environment.userFullName?.trim() ||
+        '';
+      if (name) this.applicationForm.owner = name;
+    }
     if (!this.applicationForm.ownerUpn.trim()) {
       const upn =
         sessionStorage.getItem('upn')?.trim() ||
@@ -744,10 +816,201 @@ export class WorkspaceConnectConnectorsComponent implements OnInit, OnDestroy {
     this.siteUrlInput = this.buildSiteUrlInput(this.activeSite);
     this.siteUrlParsed = !!this.activeSite.siteName.trim();
     this.resetConnectivityTest();
+    this.resetUserSearchState();
     this.accessConfigOpen = !tenantHierarchySelectionValid(this.applicationForm.tenantHierarchy);
     this.accessConfigAutoCollapsed = !this.accessConfigOpen;
     this.status.clear();
     this.emitViewChange();
+  }
+
+  get showOwnerUserDropdown(): boolean {
+    const q = this.applicationForm.owner.trim();
+    return this.ownerUserSearchOpen && q.length >= 2;
+  }
+
+  get showCoOwnerUserDropdown(): boolean {
+    const q = this.applicationForm.coOwner.trim();
+    return this.coOwnerUserSearchOpen && q.length >= 2;
+  }
+
+  onOwnerInputChange(value: string): void {
+    if (this.applicationForm.ownerUpn.trim()) {
+      const normalizedName = this.applicationForm.owner.trim().toLowerCase();
+      const normalizedUpn = this.applicationForm.ownerUpn.trim().toLowerCase();
+      if (normalizedName !== normalizedUpn) {
+        this.applicationForm.ownerUpn = '';
+      }
+    }
+    this.queueUserSearch('owner', value);
+  }
+
+  onOwnerInputFocus(): void {
+    this.ownerUserSearchOpen = true;
+    this.queueUserSearch('owner', this.applicationForm.owner);
+  }
+
+  onOwnerInputBlur(): void {
+    setTimeout(() => {
+      this.ownerUserSearchOpen = false;
+      this.cdr.markForCheck();
+    }, 140);
+  }
+
+  selectOwnerUser(option: WorkspaceDirectoryUserOption): void {
+    this.applicationForm.owner = option.name;
+    this.applicationForm.ownerUpn = option.upn || option.mail;
+    this.ownerUserOptions = [];
+    this.ownerUserSearchOpen = false;
+  }
+
+  onCoOwnerInputChange(value: string): void {
+    if (this.applicationForm.coOwnerUpn.trim()) {
+      const normalizedName = this.applicationForm.coOwner.trim().toLowerCase();
+      const normalizedUpn = this.applicationForm.coOwnerUpn.trim().toLowerCase();
+      if (normalizedName !== normalizedUpn) {
+        this.applicationForm.coOwnerUpn = '';
+      }
+    }
+    this.queueUserSearch('coOwner', value);
+  }
+
+  onCoOwnerInputFocus(): void {
+    this.coOwnerUserSearchOpen = true;
+    this.queueUserSearch('coOwner', this.applicationForm.coOwner);
+  }
+
+  onCoOwnerInputBlur(): void {
+    setTimeout(() => {
+      this.coOwnerUserSearchOpen = false;
+      this.cdr.markForCheck();
+    }, 140);
+  }
+
+  selectCoOwnerUser(option: WorkspaceDirectoryUserOption): void {
+    this.applicationForm.coOwner = option.name;
+    this.applicationForm.coOwnerUpn = option.upn || option.mail;
+    this.coOwnerUserOptions = [];
+    this.coOwnerUserSearchOpen = false;
+  }
+
+  private resetUserSearchState(): void {
+    this.ownerUserOptions = [];
+    this.coOwnerUserOptions = [];
+    this.ownerUserSearchLoading = false;
+    this.coOwnerUserSearchLoading = false;
+    this.ownerUserSearchOpen = false;
+    this.coOwnerUserSearchOpen = false;
+  }
+
+  private queueUserSearch(target: 'owner' | 'coOwner', value: string): void {
+    const term = value.trim();
+    if (term.length < 2) {
+      if (target === 'owner') {
+        this.ownerUserOptions = [];
+        this.ownerUserSearchLoading = false;
+      } else {
+        this.coOwnerUserOptions = [];
+        this.coOwnerUserSearchLoading = false;
+      }
+      return;
+    }
+    if (target === 'owner') {
+      this.ownerUserSearchLoading = true;
+      this.ownerSearchTerms$.next(term);
+    } else {
+      this.coOwnerUserSearchLoading = true;
+      this.coOwnerSearchTerms$.next(term);
+    }
+  }
+
+  private async searchWorkspaceUsers(target: 'owner' | 'coOwner', term: string): Promise<void> {
+    const seq = target === 'owner' ? ++this.ownerSearchSeq : ++this.coOwnerSearchSeq;
+    if (target === 'owner') this.ownerUserSearchLoading = true;
+    else this.coOwnerUserSearchLoading = true;
+    this.cdr.markForCheck();
+
+    const result = await awaitApi(this.api.searchWorkspaceUsers(term, 'string'), WC_CONNECTORS.api.loadFailed);
+    const latestSeq = target === 'owner' ? this.ownerSearchSeq : this.coOwnerSearchSeq;
+    if (seq !== latestSeq) return;
+
+    const options = result.ok
+      ? (result.value.users ?? [])
+        .map((u) => this.toDirectoryUserOption(u))
+        .filter((u): u is WorkspaceDirectoryUserOption => !!u)
+      : [];
+
+    if (target === 'owner') {
+      this.ownerUserOptions = options;
+      this.ownerUserSearchLoading = false;
+    } else {
+      this.coOwnerUserOptions = options;
+      this.coOwnerUserSearchLoading = false;
+    }
+    this.cdr.markForCheck();
+  }
+
+  private toDirectoryUserOption(user: WorkspaceDirectoryUserDto): WorkspaceDirectoryUserOption | null {
+    const upn = (user.userPrincipalName ?? '').trim();
+    const mail = (user.mail ?? '').trim();
+    const name = this.resolveDirectoryUserName(user, upn || mail);
+    const label = (upn || mail) ? `${name} (${upn || mail})` : name;
+    if (!label.trim()) return null;
+    return {
+      id: (user.id ?? upn ?? mail ?? name).trim() || name,
+      label,
+      name,
+      upn,
+      mail,
+      avatarSrc: this.buildAvatarDataUrl(name || upn || mail || 'U'),
+    };
+  }
+
+  private buildAvatarDataUrl(name: string): string {
+    const initials = this.initialsFromName(name);
+    const hue = this.colorHue(name);
+    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='40' height='40' viewBox='0 0 40 40'><defs><linearGradient id='g' x1='0' x2='1' y1='0' y2='1'><stop offset='0%' stop-color='hsl(${hue},72%,56%)'/><stop offset='100%' stop-color='hsl(${(hue + 28) % 360},68%,44%)'/></linearGradient></defs><circle cx='20' cy='20' r='20' fill='url(#g)'/><text x='50%' y='54%' dominant-baseline='middle' text-anchor='middle' font-family='Segoe UI, Arial, sans-serif' font-size='14' font-weight='700' fill='white'>${initials}</text></svg>`;
+    return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+  }
+
+  private initialsFromName(name: string): string {
+    const parts = name.trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return 'U';
+    const first = parts[0][0] ?? 'U';
+    const second = parts.length > 1 ? parts[parts.length - 1][0] : '';
+    return `${first}${second}`.toUpperCase();
+  }
+
+  private colorHue(value: string): number {
+    let hash = 0;
+    for (let i = 0; i < value.length; i++) {
+      hash = ((hash << 5) - hash) + value.charCodeAt(i);
+      hash |= 0;
+    }
+    return Math.abs(hash) % 360;
+  }
+
+  private resolveDirectoryUserName(user: WorkspaceDirectoryUserDto, fallback: string): string {
+    const displayName = (user.displayName ?? '').trim();
+    if (displayName) return displayName;
+    const fullName = [user.givenName?.trim(), user.surname?.trim()]
+      .filter((part): part is string => !!part)
+      .join(' ')
+      .trim();
+    if (fullName) return fullName;
+    return fallback.trim();
+  }
+
+  private resolvePayloadContactName(name: string, upn: string): string {
+    const trimmedName = name.trim();
+    if (trimmedName) return trimmedName;
+    return upn.trim();
+  }
+
+  private resolvePayloadUpn(upn: string, name: string): string {
+    const trimmedUpn = upn.trim();
+    if (trimmedUpn) return trimmedUpn;
+    const trimmedName = name.trim();
+    return trimmedName.includes('@') ? trimmedName : '';
   }
 
   async saveApplication(): Promise<void> {
@@ -807,14 +1070,18 @@ export class WorkspaceConnectConnectorsComponent implements OnInit, OnDestroy {
       }));
     const primary = sites[0];
     const hierarchy = normalizeTenantHierarchyForSave(f.tenantHierarchy);
+    const ownerUpn = this.resolvePayloadUpn(f.ownerUpn, f.owner);
+    const coOwnerUpn = this.resolvePayloadUpn(f.coOwnerUpn, f.coOwner);
+    const ownerName = this.resolvePayloadContactName(f.owner, ownerUpn);
+    const coOwnerName = this.resolvePayloadContactName(f.coOwner, coOwnerUpn);
     const payload: Partial<ApplicationDto> = {
       applicationId: f.applicationId ?? undefined,
       applicationTypeCode: f.applicationTypeCode,
       ownerKey: this.env.ownerKey,
-      owner: f.owner.trim(),
-      ownerUpn: f.ownerUpn.trim() || undefined,
-      coOwner: f.coOwner.trim() || undefined,
-      coOwnerUpn: f.coOwnerUpn.trim() || undefined,
+      owner: ownerName,
+      ownerUpn: ownerUpn || undefined,
+      coOwner: coOwnerName || undefined,
+      coOwnerUpn: coOwnerUpn || undefined,
       notes: f.notes.trim() || undefined,
       displayName: f.displayName.trim(),
       regionIdent: hierarchy.regionIdent,
@@ -832,15 +1099,15 @@ export class WorkspaceConnectConnectorsComponent implements OnInit, OnDestroy {
       sites,
       ...(this.isExternalForm
         ? {
-            tenantId: f.tenantId.trim(),
-            clientId: f.clientId.trim(),
-            clientSecret: f.clientSecret.trim(),
-          }
+          tenantId: f.tenantId.trim(),
+          clientId: f.clientId.trim(),
+          clientSecret: f.clientSecret.trim(),
+        }
         : {
-            tenantId: '',
-            clientId: '',
-            clientSecret: '',
-          }),
+          tenantId: '',
+          clientId: '',
+          clientSecret: '',
+        }),
     };
 
     const result = await awaitApi(this.api.saveApplication(payload), WC_CONNECTORS.api.saveFailed);
@@ -1107,6 +1374,25 @@ export class WorkspaceConnectConnectorsComponent implements OnInit, OnDestroy {
     this.applicationTypes = catalog.types;
     const partitioned = partitionRegisteredSites(catalog.applications);
     this.applications = partitioned.applications;
+    this.updateTenantChartModel();
+  }
+
+  private updateTenantChartModel(): void {
+    const trend = this.tenantMonthlyTrend();
+    this.tenantChartCategories = trend.labels;
+    this.tenantChartSeries = [
+      { name: this.internalTypeLabel, data: trend.internal },
+      { name: this.externalTypeLabel, data: trend.external },
+      { name: this.inactiveChartLabel, data: trend.inactive },
+    ];
+
+    this.tenantChartOptions = {
+      ...this.tenantChartOptions,
+      xaxis: {
+        ...(this.tenantChartOptions['xaxis'] as Record<string, unknown>),
+        categories: this.tenantChartCategories,
+      },
+    };
   }
 
   private async loadApplicationCatalog(): Promise<void> {

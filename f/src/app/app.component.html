@@ -23,7 +23,7 @@
 <div>
   @if (!isLogin) {
 <div>
-    <app-login [loggedIn]="authService.loggedIn" (loginClicked)="login()" (logoutClicked)="logout()"></app-login>    
+    <app-login [loggedIn]="authService.loggedIn" (loginClicked)="login()" (logoutClicked)="logout()" (guestLoginClicked)="onGuestLogin()"></app-login>    
   </div>
 }
 

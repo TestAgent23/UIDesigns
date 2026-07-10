@@ -1,18 +1,17 @@
 declare var bootstrap: any;
 import { Component, ElementRef, EventEmitter, Input, OnDestroy, OnInit, Output, ViewChild, } from '@angular/core';
-import { ProcessType } from '../shared/models/newProcess';
-import { APIResponse } from '../core/models/apiResponse';
-import { ProcessConfigService } from '../core/services/process-config.service';
 import { AbstractControl, AsyncValidatorFn, FormArray, FormBuilder, FormControl, FormGroup, ValidationErrors, ValidatorFn, Validators, } from '@angular/forms';
-import { ConfigurationService } from '../core/services/configuration.service';
-import { ModalServiceService } from '../core/services/modal-service.service';
 import { debounceTime, finalize, lastValueFrom, map, Observable, Subject, Subscription, switchMap, take, } from 'rxjs';
 import { FilePreviewValues, NewProcessSettings, RegexItem, } from '../core/models/additionalSettings';
+import { APIResponse } from '../core/models/apiResponse';
 import { ColumnNameDatatypeName, ColumnNameDatatypeNameForOfflineMode } from '../core/models/columnNameDatatypeName';
+import { DIClientNames } from '../core/models/DIClientNames';
 import { DIDatabaseNames } from '../core/models/DIDatabaseNames';
 import { DIRegions } from '../core/models/DIRegions';
 import { DISubRegions } from '../core/models/DISubRegions';
-import { DIClientNames } from '../core/models/DIClientNames';
+import { ConfigurationService } from '../core/services/configuration.service';
+import { ModalServiceService } from '../core/services/modal-service.service';
+import { ProcessConfigService } from '../core/services/process-config.service';
 import {
   DataSourceType,
   FileType,
@@ -21,7 +20,22 @@ import {
   PageNames,
   ToastrMessages,
 } from '../shared/enum';
+import { ProcessType } from '../shared/models/newProcess';
 
+import { ActivatedRoute, Router } from '@angular/router';
+import { MsalService } from '@azure/msal-angular';
+import { NgbDate, NgbModal } from '@ng-bootstrap/ng-bootstrap';
+import { BsModalRef } from 'ngx-bootstrap/modal';
+import { ToastrService } from 'ngx-toastr';
+import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
+import { ExcelRule, PayLoad } from '../core/models/DataInsider';
+import { DatatypeName, DateTimeFormats } from '../core/models/datatypeNames';
+import {
+  DdlData,
+  RegionSubRegionClient,
+  SubRegion,
+} from '../core/models/dsRegion';
+import { EnglishOnlyCharacters } from '../core/models/englistOnlyCharacters';
 import {
   FileConfigurationDetails,
   FileProcessConfig,
@@ -32,36 +46,22 @@ import {
   StorageAccount,
   WeekDayName,
 } from '../core/models/fileProcessConfig';
-import { ActivatedRoute, Router } from '@angular/router';
-import { ToastrService } from 'ngx-toastr';
-import { NgbDate, NgbModal } from '@ng-bootstrap/ng-bootstrap';
-import { BsModalRef } from 'ngx-bootstrap/modal';
-import { cleanBlobSourceLocation, cleanSourceLocation, Helper, noWhitespaceValidator, requiredArrayValidatorTemp } from '../core/utils/helper';
-import { DatatypeName, DateTimeFormats } from '../core/models/datatypeNames';
-import { FilePreviewComponent } from './file-preview/file-preview.component';
-import { DataSliceService } from '../core/services/dataslice.service';
-import {
-  DdlData,
-  RegionSubRegionClient,
-  SubRegion,
-} from '../core/models/dsRegion';
-import { cleanColumnName } from '../core/services/di-parser.service';
-import { EnglishOnlyCharacters } from '../core/models/englistOnlyCharacters';
-import { NavigateService } from '../core/services/navigate.service';
-import { MsalService } from '@azure/msal-angular';
-import { GraphApiTokenService } from '../core/services/graph-api-token.service';
-import { CampaignNames, CampaignUserAccess, SecurityGroup } from '../core/models/userDetails';
-import { BusyService } from '../core/services/busy.service';
-import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
-import { ExcelRule, PayLoad } from '../core/models/DataInsider';
-import { DataInsiderService } from '../core/services/data-insider.service';
-import { FabService } from '../core/services/FAB/fab-service.service';
-import { debug } from 'console';
 import { FileNameExtension } from '../core/models/LandingLayer/landingLayer';
+import { CampaignNames, SecurityGroup } from '../core/models/userDetails';
+import { BusyService } from '../core/services/busy.service';
+import { DataInsiderService } from '../core/services/data-insider.service';
+import { DataSliceService } from '../core/services/dataslice.service';
+import { cleanColumnName } from '../core/services/di-parser.service';
+import { FabService } from '../core/services/FAB/fab-service.service';
+import { GraphApiTokenService } from '../core/services/graph-api-token.service';
+import { NavigateService } from '../core/services/navigate.service';
+import { cleanBlobSourceLocation, cleanSourceLocation, Helper, noWhitespaceValidator, requiredArrayValidatorTemp } from '../core/utils/helper';
 import { RegexBuilderComponent } from '../regex-builder/regex-builder.component';
+import { FilePreviewComponent } from './file-preview/file-preview.component';
 // #region Sharepoint Workspace - AY
-import { ConfigurationFirstSharepointTabComponent } from './configuration-first-sharepoint-tab/configuration-first-sharepoint-tab.component';
-import { ConfigurationFirstSharepointTabNavComponent } from './configuration-first-sharepoint-tab-nav/configuration-first-sharepoint-tab-nav.component';
+import { SP_INTEGRATION } from '../workspace-connect/core/workspace-connect.messages';
+import { SharePointTenantHierarchyFilter, tenantFilterFromClientInfo, tenantFiltersEqual } from '../workspace-connect/core/workspace-connect.tenant';
+import { ProcessConfigSharePointSelection } from '../workspace-connect/core/workspace-connect.types';
 import {
   activateSharePointSettingsTab,
   isSharePointProcessType,
@@ -70,11 +70,9 @@ import {
   SHAREPOINT_SETTINGS_TAB_ID,
   sharePointFileProcessFields,
 } from '../workspace-connect/integration/configuration-first.sharepoint';
-import { SP_INTEGRATION } from '../workspace-connect/core/workspace-connect.messages';
-import { tenantFilterFromClientInfo, SharePointTenantHierarchyFilter, tenantFiltersEqual } from '../workspace-connect/core/workspace-connect.tenant';
-import { ProcessConfigSharePointSelection } from '../workspace-connect/core/workspace-connect.types';
+import { ConfigurationFirstSharepointTabComponent } from './configuration-first-sharepoint-tab/configuration-first-sharepoint-tab.component';
 // #endregion
-import { trigger, transition, style, animate } from '@angular/animations';
+import { animate, style, transition, trigger } from '@angular/animations';
 
 @Component({
   selector: 'app-new-process-configuration',
@@ -252,7 +250,7 @@ export class NewProcessConfigurationComponent implements OnInit, OnDestroy {
     this.configurationProcessType = this.navigateService.configurationProcess;
     // this.route.params.subscribe((params) => {
     //   this.paramsId = params['id'];
-    // });   
+    // });
     // this.route.queryParamMap.subscribe(queryParams => {
     //   this.tabName = queryParams.get('tabName') || null;
     // });
@@ -466,7 +464,7 @@ export class NewProcessConfigurationComponent implements OnInit, OnDestroy {
             //this.securityGroups = []; //let's empty the group since it will be patch in onPatchFormData;
           } else {
             if (!this.userSelectedSecurityGroupIsAdded) {
-              if (this.securityGroups.length > 0 && this.securityGroups[0].displayName.toLowerCase() === sessionStorage.getItem('UserDefaultGroup').toLowerCase()) { //TODO: 
+              if (this.securityGroups.length > 0 && this.securityGroups[0].displayName.toLowerCase() === sessionStorage.getItem('UserDefaultGroup').toLowerCase()) { //TODO:
                 let tempSG = this.securityGroups.find(x => x.displayName.toLowerCase() === sessionStorage.getItem('UserDefaultGroup').toLowerCase() && x.id === sessionStorage.getItem('GUID'))
                 this.processConfigurationForm.get('security_group').setValue([tempSG]);
                 this.selectedSecurityGroups.push({ securityGroupId: tempSG.id, securityGroupName: tempSG.displayName, userSelectedGroup: false });
@@ -1280,7 +1278,7 @@ export class NewProcessConfigurationComponent implements OnInit, OnDestroy {
       deltaServerNameId.setValidators([Validators.required]);
 
       deltaStorageAccountId.setValidators([Validators.required]);
-      //deltaContainerName.setValidators([Validators.required, Validators.maxLength(100), Validators.pattern(/^(?!.*--)[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/), noWhitespaceValidator]); // Validators.pattern(/^(?=.*[A-Za-z0-9])[A-Z-a-z0-9\s_-]+$/),                                                                                                          
+      //deltaContainerName.setValidators([Validators.required, Validators.maxLength(100), Validators.pattern(/^(?!.*--)[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/), noWhitespaceValidator]); // Validators.pattern(/^(?=.*[A-Za-z0-9])[A-Z-a-z0-9\s_-]+$/),
       deltaContainerName.setValidators([Validators.required, Validators.minLength(3), Validators.maxLength(63), Validators.maxLength(100), Validators.pattern(/^(?!-+$)[a-z0-9][a-z0-9\- ]*$/), noWhitespaceValidator]);
       deltaSource.setValidators([Validators.required, Validators.maxLength(100), Validators.pattern(/^(?!.*([ _-])\1)[a-zA-Z0-9_/ -]+$/), noWhitespaceValidator]); //Validators.pattern(/^(?=.*[A-Za-z0-9\/])[A-Z-a-z0-9\s\/_-]+$/),
       deltaJobId.setValidators([Validators.required, Validators.pattern(this.onlyNumbersPattern)]);
@@ -2280,8 +2278,8 @@ export class NewProcessConfigurationComponent implements OnInit, OnDestroy {
         },
       ],
     };
-    //this.configurationProcessType 
-    // if(this.navigateService.configurationProcess === DataSourceType.DataBricks){      
+    //this.configurationProcessType
+    // if(this.navigateService.configurationProcess === DataSourceType.DataBricks){
     if (this.configurationProcessType === DataSourceType.DataBricks) {
       data.configurationTableMappings[0].tableName = formValue.deltaTableName;
       data.configurationTableMappings[0].databaseConfigurationId = formValue.deltaServerNameId;
@@ -2848,7 +2846,7 @@ export class NewProcessConfigurationComponent implements OnInit, OnDestroy {
     ) {
       //this.getStorageAccountDetails(); //this has already been called in ngOnit - removed by wbq 10/22/2025
       if (this.isAdditionalSettingsTabValid()) {
-        //if (error) {   
+        //if (error) {
         const clientTab = document.getElementById(
           'addtional-setting-tab'
         ) as HTMLElement;
@@ -3092,7 +3090,7 @@ export class NewProcessConfigurationComponent implements OnInit, OnDestroy {
       // if (
       //   this.recordHeaders.filter(x => x.willInclude === false).length > 0 &&
       //   this.processConfigurationForm.get('is_validate_fileschema_with_target_table').value === false
-      // ) {       
+      // ) {
       //   this.toastr.error('An excluded column is found! Please check the Validate Schema in Database Settings');
       //   clientTab.click();
       // }
@@ -4015,7 +4013,7 @@ export class NewProcessConfigurationComponent implements OnInit, OnDestroy {
   }
 
   onDisableDelimiter(event: string) {
-    //this.disableDelimiter =  ( event=== FileType.MSExcel1 || event === FileType.MSExcel2 || event === FileType.MSExcel3)          
+    //this.disableDelimiter =  ( event=== FileType.MSExcel1 || event === FileType.MSExcel2 || event === FileType.MSExcel3)
   }
   uiValidation: boolean = false;
   excelFileRule: ExcelRule[] = [];
@@ -4039,7 +4037,7 @@ export class NewProcessConfigurationComponent implements OnInit, OnDestroy {
       return;
     }
 
-    //retrieve the flpRuleSets and pass it to the child    
+    //retrieve the flpRuleSets and pass it to the child
     if (!this.rulesetUpdated) {
       this.retriveValidationDetails(true);
     } else {
@@ -4055,7 +4053,7 @@ export class NewProcessConfigurationComponent implements OnInit, OnDestroy {
         next: (response: APIResponse<ExcelRule[]>) => {
           if (response?.responseCode === 200) {
             let excelFileRule: ExcelRule[] = response.result;
-            //use the ruleSetNameId 
+            //use the ruleSetNameId
             const payLoad: PayLoad = {
               ruleSets: excelFileRule.map(rule => ({ ...rule, ruleSetNameId: ruleSetNameId })),  //,
               created_by: sessionStorage.getItem('upn').split('@')[0],
@@ -4086,7 +4084,7 @@ export class NewProcessConfigurationComponent implements OnInit, OnDestroy {
     }
 
     if (event.saveCancel === 'save') {
-      //need to close      
+      //need to close
       this.ruleSetPayLoad = event.payLoad;
       this.processConfigurationForm.get('RuleSetName')?.setValue(event.payLoad.ruleSets[0].ruleSetName);
       this.uiValidation = false;

@@ -185,6 +185,25 @@ export interface SiteConnectivityCheckRequest {
   clientSecret?: string;
 }
 
+export interface WorkspaceDirectoryUserDto {
+  id?: string;
+  displayName?: string;
+  givenName?: string;
+  surname?: string;
+  userPrincipalName?: string;
+  mail?: string;
+  jobTitle?: string | null;
+  department?: string | null;
+  officeLocation?: string | null;
+  mobilePhone?: string | null;
+  companyName?: string | null;
+}
+
+export interface WorkspaceDirectoryUserSearchResultDto {
+  users: WorkspaceDirectoryUserDto[];
+  count: number;
+}
+
 export interface TokenResponse {
   accessToken: string;
   tokenType: string;

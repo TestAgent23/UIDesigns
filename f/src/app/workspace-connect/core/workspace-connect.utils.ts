@@ -1,11 +1,10 @@
+import { getMaterialFileIcon } from '@baybreezy/file-extension-icon';
 import { NgxDropdownConfig } from 'ngx-select-dropdown';
 import { firstValueFrom, type Observable, type Subscription } from 'rxjs';
-import { MODULE_BRANDING, WC_CONNECTORS, SP_CURL_BUILD, SP_DROPDOWN, SP_PREVIEW, SP_WORKSPACE } from './workspace-connect.messages';
-import type { SharepointUserConfig } from './workspace-connect.types';
 import { WC_IMAGES } from './workspace-connect.assets';
-import type { ApiEnvelope, ApplicationDto, ApplicationTypeCode, ApplicationTypeDto, ExternalSiteConnectivityResultDto, FileKind, MeDrivesDiscoveryReportDto, SharePointItemDto, SharePointLibraryDto, UserConnectSiteRequest, WorkspaceConnection } from './workspace-connect.types';
-import { emptyTenantHierarchySelection, normalizeTenantHierarchyForSave, tenantHierarchySelectionFromDto, type SharePointTenantHierarchySelection } from './workspace-connect.tenant';
-import { getMaterialFileIcon } from '@baybreezy/file-extension-icon';
+import { MODULE_BRANDING, SP_CURL_BUILD, SP_DROPDOWN, SP_PREVIEW, SP_WORKSPACE, WC_CONNECTORS } from './workspace-connect.messages';
+import { emptyTenantHierarchySelection, tenantHierarchySelectionFromDto, type SharePointTenantHierarchySelection } from './workspace-connect.tenant';
+import type { ApiEnvelope, ApplicationDto, ApplicationTypeCode, ApplicationTypeDto, ExternalSiteConnectivityResultDto, FileKind, MeDrivesDiscoveryReportDto, SharePointItemDto, SharePointLibraryDto, SharepointUserConfig, UserConnectSiteRequest, WorkspaceConnection } from './workspace-connect.types';
 
 const REGISTERED_APP_CODES = new Set<string>(['tp_internal', 'tp_external', 'tp_user_delegated']);
 
@@ -667,13 +666,13 @@ export function readWorkspacePrefs(): WorkspacePrefs | null {
 export function writeWorkspacePrefs(prefs: WorkspacePrefs): void {
   try {
     localStorage.setItem(WORKSPACE_PREFS_STORAGE_KEY, JSON.stringify(prefs));
-  } catch {}
+  } catch { }
 }
 
 export function removeWorkspacePrefs(): void {
   try {
     localStorage.removeItem(WORKSPACE_PREFS_STORAGE_KEY);
-  } catch {}
+  } catch { }
 }
 
 export function mapRegisteredSitesToDropdownOptions(apps: ApplicationDto[]): SpDropdownOption[] {

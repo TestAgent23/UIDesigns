@@ -10,6 +10,8 @@ import {
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Router } from '@angular/router';
 import { APIResponse } from '../models/apiResponse';
+import { TokenService } from './token.service';
+import { GUEST_TOKEN } from '../guest/guest.util';
 
 @Injectable({
   providedIn: 'root',
@@ -26,7 +28,94 @@ export class LoginService {
   wa: any;
   j: any;
 
-  constructor(private _http: HttpClient, private router: Router) {}
+  constructor(
+    private _http: HttpClient,
+    private router: Router,
+    private tokenService: TokenService
+  ) {}
+
+  /**
+   * Local environment to be deleted later -AY — guest bypass token when not production.
+   */
+  private resolveAppApiToken(msalAccessToken?: string): string {
+    if (environment.production && msalAccessToken?.trim()) {
+      return msalAccessToken;
+    }
+    return GUEST_TOKEN;
+  }
+
+  /** Shared session bootstrap — guest login and MSAL login both use this. */
+  private bootstrapAppSession(params: {
+    upn: string;
+    username: string;
+    fullName: string;
+    email: string;
+    userId: string;
+    guid: string;
+    groupName: string;
+    jobTitle: string;
+    apiToken: string;
+    isGuest: boolean;
+  }): void {
+    if (params.isGuest) {
+      sessionStorage.setItem('isGuestLogin', 'true');
+    } else {
+      sessionStorage.removeItem('isGuestLogin');
+    }
+    sessionStorage.setItem('upn', params.upn);
+    sessionStorage.setItem('username', params.username);
+    sessionStorage.setItem('userFullName', params.fullName);
+    sessionStorage.setItem('FullName', params.fullName);
+    sessionStorage.setItem('emailID', params.email);
+    sessionStorage.setItem('fullUPN', params.email);
+    sessionStorage.setItem('userId', params.userId);
+    sessionStorage.setItem('Upn', params.email);
+    sessionStorage.setItem('GUID', params.guid);
+    sessionStorage.setItem('UserDefaultGroup', params.groupName);
+    sessionStorage.setItem('JobTitle', params.jobTitle);
+    sessionStorage.setItem('tokenTime', new Date().toString());
+
+    localStorage.setItem('DIApiToken', params.apiToken);
+    this.tokenService.setToken(params.apiToken);
+
+    environment.userId = params.username;
+    environment.userFullName = params.fullName;
+    environment.isAdmin = 'true';
+
+    const nameParts = params.fullName.split(' ').filter(Boolean);
+    this.currentUserSource.next({
+      token: params.apiToken,
+      userFullName: params.fullName,
+      FirstName: nameParts[0] ?? params.fullName,
+      LastName: nameParts.slice(1).join(' ') || '',
+      displayName: params.fullName,
+      UPN: params.email,
+      email: params.email,
+      Image: '',
+      employeeId: params.userId,
+      isAdmin: true,
+    } as UserDetails);
+  }
+
+  hasAppSession(): boolean {
+    return !!sessionStorage.getItem('upn')?.trim();
+  }
+
+  /** Dev-only bypass: skip Azure login and enter the app as a guest user. */
+  guestLogin(): void {
+    this.bootstrapAppSession({
+      upn: 'guest',
+      username: 'guest',
+      fullName: 'Guest User',
+      email: 'guest@local.dev',
+      userId: 'guest',
+      guid: '00000000-0000-0000-0000-000000000001',
+      groupName: 'Product Development',
+      jobTitle: 'Guest',
+      apiToken: GUEST_TOKEN,
+      isGuest: true,
+    });
+  }
 
   authenticate() {
     const httpHeader = {

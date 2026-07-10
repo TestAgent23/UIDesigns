@@ -1,11 +1,10 @@
-import { inject, Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
-import { Observable, catchError, forkJoin, map, of } from 'rxjs';
-import { SHAREPOINT_ENV } from '../core/workspace-connect.types';
+import { inject, Injectable } from '@angular/core';
+import { catchError, forkJoin, map, Observable, of, timeout } from 'rxjs';
 import { SP_API } from '../core/workspace-connect.messages';
-import { encodePath64, FALLBACK_APPLICATION_TYPES, filterRegisterableApplicationTypes, filterRegisteredApplications, unwrapApiEnvelope, unwrapSiteConnectivityEnvelope } from '../core/workspace-connect.utils';
-import { ApiEnvelope, ApplicationCatalog, ApplicationDto, ApplicationTypeDto, ExternalSiteConnectivityResultDto, SharePointItemDto, SharePointLibraryDto, SiteConnectivityCheckRequest, TokenResponse, WorkspaceConnection } from '../core/workspace-connect.types';
 import type { SharePointTenantHierarchyFilter } from '../core/workspace-connect.tenant';
+import { ApiEnvelope, ApplicationCatalog, ApplicationDto, ApplicationTypeDto, ExternalSiteConnectivityResultDto, SHAREPOINT_ENV, SharePointItemDto, SharePointLibraryDto, SiteConnectivityCheckRequest, TokenResponse, WorkspaceConnection, WorkspaceDirectoryUserSearchResultDto } from '../core/workspace-connect.types';
+import { encodePath64, FALLBACK_APPLICATION_TYPES, filterRegisterableApplicationTypes, filterRegisteredApplications, unwrapApiEnvelope, unwrapSiteConnectivityEnvelope } from '../core/workspace-connect.utils';
 
 @Injectable({ providedIn: 'root' })
 export class SharePointApiService {
@@ -22,7 +21,10 @@ export class SharePointApiService {
   listApplicationTypes(): Observable<ApplicationTypeDto[]> {
     return this.http
       .get<ApiEnvelope<ApplicationTypeDto[]>>(`${this.baseUrl}/applications/types`)
-      .pipe(map((res) => unwrapApiEnvelope(res, SP_API.requestFailed)));
+      .pipe(
+        timeout(20000),
+        map((res) => unwrapApiEnvelope(res, SP_API.requestFailed)),
+      );
   }
 
   listApplications(options?: { typeCode?: string; includeInactive?: boolean } & SharePointTenantHierarchyFilter): Observable<ApplicationDto[]> {
@@ -36,7 +38,10 @@ export class SharePointApiService {
     const qs = params.toString() ? `?${params.toString()}` : '';
     return this.http
       .get<ApiEnvelope<ApplicationDto[]>>(`${this.baseUrl}/applications${qs}`)
-      .pipe(map((res) => unwrapApiEnvelope(res, SP_API.requestFailed)));
+      .pipe(
+        timeout(20000),
+        map((res) => unwrapApiEnvelope(res, SP_API.requestFailed)),
+      );
   }
 
   loadApplicationCatalog(filter?: SharePointTenantHierarchyFilter & { includeInactive?: boolean }): Observable<ApplicationCatalog> {
@@ -85,6 +90,16 @@ export class SharePointApiService {
     return this.http
       .delete<ApiEnvelope<unknown>>(`${this.baseUrl}/applications/${applicationId}`)
       .pipe(map(() => undefined));
+  }
+
+  searchWorkspaceUsers(term: string, searchType = 'string'): Observable<WorkspaceDirectoryUserSearchResultDto> {
+    return this.http
+      .post<ApiEnvelope<WorkspaceDirectoryUserSearchResultDto>>(
+        `${this.baseUrl}/workspace/user/search-users`,
+        { term: term.trim(), searchType },
+        { headers: this.headers },
+      )
+      .pipe(map((res) => unwrapApiEnvelope(res, SP_API.requestFailed)));
   }
 
   listLibraries(connection: WorkspaceConnection): Observable<SharePointLibraryDto[]> {

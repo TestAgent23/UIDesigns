@@ -1,23 +1,34 @@
-<div class="gw">
+<div class="gw" (pointerdown)="primeAudio()">
   <div class="gw__vignette" aria-hidden="true"></div>
-  <div class="gw__ambient" aria-hidden="true">
-    <span class="gw__orb gw__orb--1"></span>
-    <span class="gw__orb gw__orb--2"></span>
+  <div class="gw__backdrop" aria-hidden="true">
+    <span class="gw__blur gw__blur--a"></span>
+    <span class="gw__blur gw__blur--b"></span>
+    <span class="gw__blur gw__blur--c"></span>
   </div>
 
   <div class="gw__shell">
     <header class="gw__topbar">
-      <button type="button" class="gw__exit" (click)="cancel()">
+      <button type="button" class="gw__exit" (click)="cancel($event)">
         <sp-icon name="x" size="sm" />
         <span>{{ m.cancel }}</span>
       </button>
       <div class="gw__topbar-meta">
+        <button
+          type="button"
+          class="gw__sound-toggle"
+          [class.gw__sound-toggle--on]="soundEnabled"
+          [attr.aria-pressed]="soundEnabled"
+          [attr.aria-label]="soundEnabled ? m.soundOff : m.soundOn"
+          (click)="toggleSound()">
+          <sp-icon [name]="soundEnabled ? 'volume' : 'volume-off'" size="sm" />
+          <span>{{ soundEnabled ? m.soundEnabled : m.soundMuted }}</span>
+        </button>
         <span class="gw__step-count">{{ stepOfLabel }}</span>
       </div>
     </header>
 
     <nav class="gw__phases" aria-label="Registration progress">
-      @for (phase of phaseTrack; track phase.id) {
+      @for (phase of phaseTrack; track phase.id; let i = $index) {
         <div
           class="gw__phase-seg"
           [class.gw__phase-seg--done]="phase.done"
@@ -26,6 +37,8 @@
           <span class="gw__phase-dot">
             @if (phase.done) {
               <sp-icon name="check" size="sm" />
+            } @else {
+              <span>{{ i + 1 }}</span>
             }
           </span>
           <span class="gw__phase-label">{{ phase.label }}</span>
@@ -39,6 +52,7 @@
 
     <div class="gw__workspace">
       <aside class="gw__visual" @visualFloat>
+        <div class="gw__visual-ribbon" aria-hidden="true"></div>
         <div class="gw__visual-orbit" aria-hidden="true"></div>
         <div class="gw__visual-glow" aria-hidden="true"></div>
         <div class="gw__visual-core">

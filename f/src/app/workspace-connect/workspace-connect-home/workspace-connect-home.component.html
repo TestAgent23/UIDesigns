@@ -45,13 +45,15 @@
         <button type="button" class="sp-hero__cta sp-hero__cta--primary" (click)="openRegister.emit()">
           Register Tenants
         </button>
+        <!--
+        <button type="button" class="sp-hero__cta sp-hero__cta--secondary" (click)="openSharepointWorkspace.emit()">
+          <sp-icon name="folder-open" size="sm" />
+          {{ branding.browseNavTitle }}
+        </button>
+        -->
         <button type="button" class="sp-hero__cta sp-hero__cta--secondary" (click)="openGuidedRegister.emit()">
           <sp-icon name="sparkles" size="sm" />
           {{ branding.guidedRegisterNavTitle }}
-        </button>
-        <button type="button" class="sp-hero__cta sp-hero__cta--secondary" (click)="openSharepointWorkspace.emit()">
-          <sp-icon name="folder-open" size="sm" />
-          Browse workspace
         </button>
       </div>
     </div>
@@ -124,14 +126,15 @@
           <img class="sp-hero__satellite-img" [src]="images.hero.dropbox" alt="" aria-hidden="true" />
         </div>
         <div class="sp-hero__satellite sp-hero__satellite--sharepoint">
-          <img class="sp-hero__satellite-img sp-hero__satellite-img--brand" [src]="images.sharepointMark" alt="" aria-hidden="true" />
+          <img class="sp-hero__satellite-img sp-hero__satellite-img--brand" [src]="images.sharepointMark" alt=""
+            aria-hidden="true" />
         </div>
         <div class="sp-hero__satellite sp-hero__satellite--slack">
           <img class="sp-hero__satellite-img" [src]="images.hero.slack" alt="" aria-hidden="true" />
         </div>
 
         @for (p of particles; track $index) {
-          <span class="sp-hero__particle" [style.--particle-index]="$index"></span>
+        <span class="sp-hero__particle" [style.--particle-index]="$index"></span>
         }
       </div>
     </div>
@@ -152,6 +155,26 @@
     </div>
 
     <div class="sp-nav-grid">
+      <!--
+      <button type="button" class="sp-nav-card" (click)="openSharepointWorkspace.emit()">
+        <span class="sp-nav-card__glow" aria-hidden="true"></span>
+        <div class="sp-nav-card__header">
+          <span class="sp-nav-card__icon sp-nav-card__icon--sharepoint" aria-hidden="true">
+            <sp-sharepoint-logo />
+          </span>
+          <sp-icon class="sp-nav-card__chevron" name="arrow-right" />
+        </div>
+        <div class="sp-nav-card__content">
+          <strong class="sp-nav-card__title">{{ branding.browseNavTitle }}</strong>
+          <p class="sp-nav-card__hint">{{ branding.browseNavHint }}</p>
+        </div>
+        <span class="sp-nav-card__footer">
+          <span>Open workspace</span>
+          <sp-icon name="chevron-right" size="sm" />
+        </span>
+      </button>
+      -->
+
       <button type="button" class="sp-nav-card" (click)="openConnectors.emit()">
         <span class="sp-nav-card__glow" aria-hidden="true"></span>
         <div class="sp-nav-card__header">
@@ -187,23 +210,7 @@
         </span>
       </div>
 
-      <button type="button" class="sp-nav-card" (click)="openSharepointWorkspace.emit()">
-        <span class="sp-nav-card__glow" aria-hidden="true"></span>
-        <div class="sp-nav-card__header">
-          <span class="sp-nav-card__icon sp-nav-card__icon--workspace" aria-hidden="true">
-            <img class="sp-nav-card__icon-img" [src]="images.hero.workspace" alt="" />
-          </span>
-          <sp-icon class="sp-nav-card__chevron" name="arrow-right" />
-        </div>
-        <div class="sp-nav-card__content">
-          <strong class="sp-nav-card__title">{{ branding.browseNavTitle }}</strong>
-          <p class="sp-nav-card__hint">{{ branding.browseNavHint }}</p>
-        </div>
-        <span class="sp-nav-card__footer">
-          <span>Open workspace</span>
-          <sp-icon name="chevron-right" size="sm" />
-        </span>
-      </button>
+
     </div>
   </section>
 
@@ -224,14 +231,14 @@
       </div>
       <ul class="sp-help-list">
         @for (item of help.items; track item.title; let i = $index) {
-          <li class="sp-help-list__item">
-            <span class="sp-help-list__number">{{ i + 1 }}</span>
-            <div class="sp-help-list__content">
-              <strong class="sp-help-list__title">{{ item.title }}</strong>
-              <span class="sp-help-list__text">{{ item.description }}</span>
-            </div>
-            <sp-icon class="sp-help-list__arrow" name="chevron-right" size="sm" />
-          </li>
+        <li class="sp-help-list__item">
+          <span class="sp-help-list__number">{{ i + 1 }}</span>
+          <div class="sp-help-list__content">
+            <strong class="sp-help-list__title">{{ item.title }}</strong>
+            <span class="sp-help-list__text">{{ item.description }}</span>
+          </div>
+          <sp-icon class="sp-help-list__arrow" name="chevron-right" size="sm" />
+        </li>
         }
       </ul>
     </div>

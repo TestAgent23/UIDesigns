@@ -9,10 +9,17 @@
     border-radius: 5px;
     overflow-x: auto;
 }
-.full-width{width: 100%;}
-.left-section{    width: 90%;
+
+.full-width {
+    width: 100%;
+}
+
+.left-section {
+    width: 90%;
     word-break: break-all;
-    float: left;}
+    float: left;
+}
+
 .p-15 {
     padding: 15px !important;
 }
@@ -22,6 +29,7 @@
     padding-bottom: 5px;
     margin-bottom: 10px;
 }
+
 .p-15 {
     padding: 15px !important;
 }
@@ -86,48 +94,48 @@
 
 /* SharePoint settings tab — browser-first, full height */
 .tab-content:has(#sharepoint-settings-tab-pane.active) {
-  display: flex;
-  flex-direction: column;
-  height: calc(100vh - 168px);
-  max-height: calc(100vh - 168px);
-  min-height: 0;
-  padding: 4px 12px 0;
-  overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 168px);
+    max-height: calc(100vh - 168px);
+    min-height: 0;
+    padding: 4px 12px 0;
+    overflow: hidden;
 }
 
 #sharepoint-settings-tab-pane.active {
-  display: flex !important;
-  flex: 1;
-  flex-direction: column;
-  min-height: 0;
+    display: flex !important;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
 }
 
 #sharepoint-settings-tab-pane.active .npc-sp-panel,
 #sharepoint-settings-tab-pane.active .npc-sp-card--workspace {
-  flex: 1;
-  min-height: 0;
+    flex: 1;
+    min-height: 0;
 }
 
 /* Wizard footer — cohesive bar when SharePoint tab is active */
 .tab-content:has(#sharepoint-settings-tab-pane.active) .button-section {
-  margin-left: 260px;
-  margin-top: 0;
-  padding: 12px 24px 16px;
-  background: var(--background-01, #fff);
-  border-top: 1px solid var(--stroke-01, #dedae4);
-  box-shadow: 0 -4px 16px rgba(15, 23, 42, 0.06);
-  position: sticky;
-  bottom: 0;
-  z-index: 5;
+    margin-left: 260px;
+    margin-top: 0;
+    padding: 12px 24px 16px;
+    background: var(--background-01, #fff);
+    border-top: 1px solid var(--stroke-01, #dedae4);
+    box-shadow: 0 -4px 16px rgba(15, 23, 42, 0.06);
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
 }
 
 @media (max-width: 1100px) {
-  .tab-content:has(#sharepoint-settings-tab-pane.active) .button-section {
-    margin-left: 0;
-  }
+    .tab-content:has(#sharepoint-settings-tab-pane.active) .button-section {
+        margin-left: 0;
+    }
 }
 
-/* 
+/*
 #myTabContent {
     padding: 15px 10px 10px;
 } */
@@ -252,17 +260,20 @@ label.form-check-label:focus,
     width: 100%;
 }
 
-#fileUploadPage {
-}
+#fileUploadPage {}
 
 #fileUploadPage {
     height: 100%;
     width: 100%;
     display: flex;
+    --ff-settings-width: clamp(420px, 34vw, 540px);
 }
 
-.slide-left {
+#fileUploadPage.ff-process-settings-split {
+    gap: 14px;
 }
+
+.slide-left {}
 
 .slide-left {
     background: #ffffff;
@@ -280,9 +291,7 @@ label.form-check-label:focus,
     overflow: auto
 }
 
-#modifySettings {
-
-}
+#modifySettings {}
 
 .slide-left.open {
     max-width: 600px;
@@ -300,20 +309,21 @@ label.form-check-label:focus,
     opacity: 0;
 }
 
-#modifySettings.open {
-}
+#modifySettings.open {}
 
 #modifySettings.open {
     display: flex !important;
     flex-direction: column;
     height: 100%;
     /* min-width: 25%; */
-    width: 500px;
-    overflow-x: auto;
+    width: var(--ff-settings-width);
+    min-width: var(--ff-settings-width);
+    max-width: var(--ff-settings-width);
+    flex: 0 0 var(--ff-settings-width);
+    overflow-x: hidden;
 }
 
-.panel-header {
-}
+.panel-header {}
 
 .panel-header {
     display: flex;
@@ -321,8 +331,7 @@ label.form-check-label:focus,
     padding: 20px 15px 0px;
 }
 
-.close-icon {
-}
+.close-icon {}
 
 .close-icon {
     cursor: pointer;
@@ -334,8 +343,7 @@ label.form-check-label:focus,
 }
 
 .base-setting,
-.button-section {
-}
+.button-section {}
 
 .ng-star-inserted {
     padding: 0px !important;
@@ -351,8 +359,7 @@ label.form-check-label:focus,
     margin-top: 10px;
 }
 
-.selected-groups .badge {
-}
+.selected-groups .badge {}
 
 .selected-groups .badge {
     display: inline-flex;
@@ -437,8 +444,10 @@ ul.ruleset li {
         flex-direction: column;
         width: 100%;
     }
-    .nav-tab .nav-link{
-        padding: 10px 0px;}
+
+    .nav-tab .nav-link {
+        padding: 10px 0px;
+    }
 }
 
 
@@ -463,5 +472,26 @@ ul.ruleset li {
 }
 
 .categoryColor {
-    color : #000000;
+    color: #000000;
+}
+
+::ng-deep .npc-sg-select .ng-dropdown-panel .ng-option .npc-sg-option-text {
+    display: block;
+    max-width: 420px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+::ng-deep .npc-sg-select.ng-select-multiple .ng-select-container .ng-value {
+    max-width: 220px;
+}
+
+::ng-deep .npc-sg-select .npc-sg-tag-text {
+    display: inline-block;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: bottom;
 }

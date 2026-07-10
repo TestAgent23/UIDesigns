@@ -2,6 +2,7 @@ import { Injectable } from '@angular/core';
 import { MsalService } from '@azure/msal-angular';
 import { Observable, of, throwError } from 'rxjs';
 import { catchError, map, tap } from 'rxjs/operators';
+import { isGuestSession } from '../guest/guest.util';
 const TOKEN_KEY = 'access_token';
 const EXPIRY_KEY = 'token_expiry';
 
@@ -18,6 +19,10 @@ export class GraphApiTokenService {
    * @returns An Observable of the access token.
    */
   getAccessToken(scopes: string[]) : Observable<string>{
+    if (isGuestSession()) {
+      return of('guest-graph-token');
+    }
+
     const token = localStorage.getItem(TOKEN_KEY);
     const expiry = localStorage.getItem(EXPIRY_KEY);
 

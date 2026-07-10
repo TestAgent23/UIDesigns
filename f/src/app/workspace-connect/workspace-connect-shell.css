@@ -50,12 +50,21 @@
   line-height: 1.5;
 }
 
-button { font-family: inherit; }
+button {
+  font-family: inherit;
+}
 
 .sp-app {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+}
+
+.sp-app > sp-module-breadcrumb {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  background: var(--sp-surface);
 }
 
 .sp-app:has(> .sp-app-main > app-sharepoint-workspace) {
@@ -75,7 +84,7 @@ button { font-family: inherit; }
   padding: 0;
 }
 
-.sp-app-main > app-sharepoint-workspace {
+.sp-app-main>app-sharepoint-workspace {
   display: flex;
   flex: 1;
   flex-direction: column;
@@ -84,7 +93,10 @@ button { font-family: inherit; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+
+  .sp-app-main> :not(app-workspace-connect-home) *,
+  .sp-app-main> :not(app-workspace-connect-home) *::before,
+  .sp-app-main> :not(app-workspace-connect-home) *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;

@@ -40,6 +40,7 @@ import {
   StatusAlerts,
 } from '../core/workspace-connect.utils';
 import { SharePointApiService } from '../services/sharepoint-api.service';
+import { WorkspaceConnectAudioService } from '../services/workspace-connect-audio.service';
 import {
   normalizeTenantHierarchyForSave,
   SharePointTenantHierarchySelection,
@@ -138,6 +139,7 @@ interface MicroStepMeta {
 export class WorkspaceConnectGuidedRegistrationComponent implements OnInit, OnDestroy {
   private readonly api = inject(SharePointApiService);
   private readonly ngZone = inject(NgZone);
+  private readonly audio = inject(WorkspaceConnectAudioService);
 
   @Output() readonly useApplication = new EventEmitter<ApplicationDto>();
   @Output() readonly navigateHome = new EventEmitter<void>();
@@ -174,6 +176,10 @@ export class WorkspaceConnectGuidedRegistrationComponent implements OnInit, OnDe
   private siteUrlParseFinishTimer: ReturnType<typeof setTimeout> | null = null;
   private siteUrlParseStartedAt = 0;
   private readonly siteUrlParseMinMs = 420;
+
+  get soundEnabled(): boolean {
+    return this.audio.enabled;
+  }
 
   get activeSite(): ApplicationSiteFormModel {
     if (!this.applicationForm.sites.length) return emptyApplicationSite();
@@ -452,7 +458,18 @@ export class WorkspaceConnectGuidedRegistrationComponent implements OnInit, OnDe
     this.setRegistrationType(id);
     if (wasExternal !== this.isExternalForm && this.isOnEntraStep()) {
       this.microStepId = 'site-type';
+      this.speakCurrentGuidance();
     }
+  }
+
+  toggleSound(): void {
+    if (this.audio.toggle()) {
+      this.speakCurrentGuidance();
+    }
+  }
+
+  primeAudio(): void {
+    this.audio.prime();
   }
 
   onSiteUrlChange(): void {
@@ -531,12 +548,14 @@ export class WorkspaceConnectGuidedRegistrationComponent implements OnInit, OnDe
     if (this.microStepId === 'success') {
       this.stepAnimationCounter--;
       this.microStepId = 'review';
+      this.speakCurrentGuidance();
       return;
     }
     const idx = this.currentStepIndex - 1;
     if (idx >= 0) {
       this.stepAnimationCounter--;
       this.microStepId = this.stepPath[idx];
+      this.speakCurrentGuidance();
     }
   }
 
@@ -556,7 +575,9 @@ export class WorkspaceConnectGuidedRegistrationComponent implements OnInit, OnDe
     this.advanceMicroStep();
   }
 
-  cancel(): void {
+  cancel(event?: Event): void {
+    event?.stopPropagation();
+    this.audio.stop();
     if (this.savedApplication) {
       this.browseWorkspace();
     } else {
@@ -589,12 +610,14 @@ export class WorkspaceConnectGuidedRegistrationComponent implements OnInit, OnDe
     this.connectivityResult = null;
     this.checkingConnectivity = true;
     this.availableLibraries = [];
+    this.audio.speak(this.m.verifyCoachTesting);
 
     try {
       const request = this.buildConnectivityRequest(siteName);
       const result = await awaitApi(this.api.validateSiteConnectivity(request), this.WC_CONNECTORS.api.validateFailed);
       if (!result.ok) {
         this.connectivityError = parseApiError(result.error, this.WC_CONNECTORS.api.validateFailed);
+        this.audio.speak(this.m.verifyCoachFailed);
         return;
       }
       this.connectivityResult = result.value;
@@ -606,11 +629,14 @@ export class WorkspaceConnectGuidedRegistrationComponent implements OnInit, OnDe
             preferredLibraryNames({ primary: environment.libraryName || environment.defaultLibraryName }),
           ) || this.activeSite.libraryName;
         this.connectivityError = '';
+        this.audio.speak(this.m.verifyCoachSuccess);
       } else {
         this.connectivityError = this.WC_CONNECTORS.api.validateFailed;
+        this.audio.speak(this.m.verifyCoachFailed);
       }
     } catch (err) {
       this.connectivityError = parseApiError(err, this.WC_CONNECTORS.api.validateFailed);
+      this.audio.speak(this.m.verifyCoachFailed);
     } finally {
       this.checkingConnectivity = false;
     }
@@ -636,8 +662,10 @@ export class WorkspaceConnectGuidedRegistrationComponent implements OnInit, OnDe
           ? this.m.successInactive(this.savedApplication.displayName)
           : this.m.successActive(this.savedApplication.displayName),
       );
+      this.speakCurrentGuidance();
     } catch (err) {
       this.status.setApiError(parseApiError(err, this.WC_CONNECTORS.api.saveFailed), this.WC_CONNECTORS.api.saveFailed);
+      this.audio.speak(this.WC_CONNECTORS.api.saveFailed);
     } finally {
       this.saving = false;
     }
@@ -652,6 +680,7 @@ export class WorkspaceConnectGuidedRegistrationComponent implements OnInit, OnDe
   skipToReview(): void {
     this.stepAnimationCounter++;
     this.microStepId = 'review';
+    this.speakCurrentGuidance();
   }
 
   private advanceMicroStep(): void {
@@ -659,7 +688,12 @@ export class WorkspaceConnectGuidedRegistrationComponent implements OnInit, OnDe
     if (idx < this.stepPath.length) {
       this.stepAnimationCounter++;
       this.microStepId = this.stepPath[idx];
+      this.speakCurrentGuidance();
     }
+  }
+
+  private speakCurrentGuidance(): void {
+    this.audio.speak(this.coachMessage());
   }
 
   private isOnEntraStep(): boolean {

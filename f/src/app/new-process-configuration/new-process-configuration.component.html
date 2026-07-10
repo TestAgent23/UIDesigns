@@ -98,8 +98,7 @@
               </button>
 
               <app-configuration-first-sharepoint-tab-nav
-                [processType]="processConfigurationForm.get('processType')?.value"
-                [activeTab]="activeTab"
+                [processType]="processConfigurationForm.get('processType')?.value" [activeTab]="activeTab"
                 (tabChanged)="onTabChanged(sharePointSettingsTabId, $event)">
               </app-configuration-first-sharepoint-tab-nav>
 
@@ -686,7 +685,7 @@
 
               <div [ngClass]="{'active':activeTab === 'client-tab'}" class="tab-pane fade show" id="client-tab-pane"
                 role="tabpanel" aria-labelledby="client-tab" tabindex="0">
-                <!-- *ngIf="('' | isFabUser) && 
+                <!-- *ngIf="('' | isFabUser) &&
                                 ( ((paramsId && paramsId != '') && configurationDetails?.campaignId !== null)
                                 || (paramsId == '' || paramsId == null) ) " -->
                 <div class="mb-3">
@@ -938,11 +937,18 @@
                     <div class="note" style="font-size: x-small;">Minimum of 5 characters to start
                       searching</div>
                     <!-- Dropdown for searching and selecting security groups -->
-                    <ng-select [items]="securityGroups" bindLabel="displayName" bindValue="id" [multiple]="true"
-                      [clearable]="true" placeholder="Search and select security groups"
-                      formControlName="security_group" [compareWith]="compareWithFn"
+                    <ng-select class="npc-sg-select" [items]="securityGroups" bindLabel="displayName" bindValue="id"
+                      [multiple]="true" [clearable]="true" placeholder="Search and select security groups"
+                      appendTo="body" formControlName="security_group" [compareWith]="compareWithFn"
                       (change)="onSecurityGroupSelect($event)" (search)="onSearchGroup($event.term)"
                       (blur)="onBlurSearchGroup($event)">
+                      <ng-template ng-option-tmp let-item="item">
+                        <span class="npc-sg-option-text" [title]="item.displayName">{{ item.displayName }}</span>
+                      </ng-template>
+                      <ng-template ng-label-tmp let-item="item" let-clear="clear">
+                        <span class="npc-sg-tag-text" [title]="item.displayName">{{ item.displayName }}</span>
+                        <span class="ng-value-icon right" (click)="clear(item)" aria-hidden="true">×</span>
+                      </ng-template>
                     </ng-select>
 
                     @if ((processConfigurationForm.get('security_group')?.touched || isSubmitted)) {
@@ -1552,16 +1558,12 @@
                 </div>
               </div>
               @if (isSharePointProcessType(processConfigurationForm.get('processType')?.value)) {
-              <app-configuration-first-sharepoint-tab
-                #sharePointTab
-                [activeTab]="activeTab"
+              <app-configuration-first-sharepoint-tab #sharePointTab [activeTab]="activeTab"
                 [processType]="processConfigurationForm.get('processType')?.value"
-                [hierarchyFilter]="sharePointHierarchyFilterValue"
-                [initialsLoading]="sharePointSourceLoading"
+                [hierarchyFilter]="sharePointHierarchyFilterValue" [initialsLoading]="sharePointSourceLoading"
                 [initialApplicationId]="sharePointInitialApplicationId"
                 [initialApplicationSiteId]="sharePointInitialApplicationSiteId"
-                [initialLibraryName]="sharePointInitialLibraryName"
-                [initialFolderPath]="sharePointInitialFolderPath"
+                [initialLibraryName]="sharePointInitialLibraryName" [initialFolderPath]="sharePointInitialFolderPath"
                 (selectionChange)="onSharePointSelectionChange($event)">
               </app-configuration-first-sharepoint-tab>
               }
@@ -1845,8 +1847,7 @@
     <div class="p-15">
       <app-create-rule [pageName]="pageName" [processName]="processConfigurationForm.get('processName')?.value"
         [tabName]="tabName" [ruleSetNameId]="configurationDetails?.flpRuleSet[0]?.ruleSetNameId"
-        [column_name_list]="processConfigurationForm.get('column_name_list')?.value"
-        [recordHeaders]="recordHeaders"
+        [column_name_list]="processConfigurationForm.get('column_name_list')?.value" [recordHeaders]="recordHeaders"
         (notifyParentToClose)="onUIValidationClose($event)" [selectedSecurityGroups]="selectedSecurityGroups"
         [inputRuleSetPayload]="ruleSetPayLoad"></app-create-rule>
     </div>

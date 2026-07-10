@@ -12,6 +12,11 @@
       <button type="button" class="btn btn-dark login-btn" (click)="login()">
         Login
       </button>
+      @if (!environment.production) {
+        <button type="button" class="btn btn-outline-secondary guest-login-btn" (click)="guestLogin()">
+          Continue as Guest
+        </button>
+      }
     </div>
     <div class="login-bottom">
       <div class="login-footer">

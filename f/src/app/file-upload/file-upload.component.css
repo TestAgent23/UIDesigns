@@ -2,6 +2,11 @@
   height: 100%;
   width: 100%;
   display: flex;
+  --ff-settings-width: clamp(420px, 34vw, 540px);
+}
+
+#fileUploadPage.ff-process-settings-split {
+  gap: 14px;
 }
 
 ng-select.w-100 {
@@ -31,8 +36,11 @@ ng-select.w-100 {
   flex-direction: column;
   height: 100%;
   /* min-width: 25%; */
-  width: 500px;
-  overflow-x: auto;
+  width: var(--ff-settings-width);
+  min-width: var(--ff-settings-width);
+  max-width: var(--ff-settings-width);
+  flex: 0 0 var(--ff-settings-width);
+  overflow-x: hidden;
   z-index: 1;
 }
 
@@ -363,7 +371,7 @@ input.text-upload {
 
 
 .width-adjust {
-  max-width: calc(100% - 500px);
+  max-width: calc(100% - var(--ff-settings-width));
 }
 
 .panel-header {
@@ -639,9 +647,9 @@ input.text-upload {
 
 
 /* .tabValidate {
-   background-color: #f5c6cb !important; 
-  color: rgb(19, 15, 15) !important;         
-  border: 4px solid #f5c6cb !important; 
+   background-color: #f5c6cb !important;
+  color: rgb(19, 15, 15) !important;
+  border: 4px solid #f5c6cb !important;
   border-radius: 4px;
 } */
 
@@ -751,23 +759,23 @@ li button.nav-link.active {
 
 
 /* Remove all internal borders for a clean outer box */
-.invalid-row > td {
+.invalid-row>td {
   border: none !important;
 }
 
 /* TOP + BOTTOM border across entire row */
-.invalid-row > td {
+.invalid-row>td {
   border-top: 2px solid red !important;
   border-bottom: 2px solid red !important;
 }
 
 /* LEFT border on the first cell */
-.invalid-row > td:first-child {
+.invalid-row>td:first-child {
   border-left: 2px solid red !important;
 }
 
 /* RIGHT border on the last cell */
-.invalid-row > td:last-child {
+.invalid-row>td:last-child {
   border-right: 2px solid red !important;
 }
 
@@ -874,8 +882,17 @@ li button.nav-link.active {
 
 /* Split layout when Process Settings drawer is open */
 #fileUploadPage.ff-process-settings-split #uploadPanel.width-adjust {
-  width: calc(100% - 560px) !important;
-  max-width: calc(100% - 560px);
+  width: auto !important;
+  max-width: none;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+#fileUploadPage.ff-process-settings-split #uploadPanel {
+  width: auto !important;
+  max-width: none;
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 /* SharePoint-only: full width when drawer closed */

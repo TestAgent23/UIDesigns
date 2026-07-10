@@ -39,6 +39,8 @@ export type SpIconName =
   | 'connector'
   | 'database'
   | 'sparkles'
+  | 'volume'
+  | 'volume-off'
   | 'azure'
   | 'aws'
   | 'dropbox'
@@ -237,6 +239,16 @@ export type SpIconName =
         @case ('sparkles') {
           <path d="M12 2l1.5 5L18 8l-4.5 1.5L12 15l-1.5-5.5L6 8l4.5-1.5Z" />
           <path d="M19 14l.8 2.2L22 17l-2.2.8L19 20l-.8-2.2L16 17l2.2-.8Z" />
+        }
+        @case ('volume') {
+          <path d="M11 5 6 9H3v6h3l5 4V5Z" />
+          <path d="M15.5 8.5a5 5 0 0 1 0 7" />
+          <path d="M18.5 5.5a9 9 0 0 1 0 13" />
+        }
+        @case ('volume-off') {
+          <path d="M11 5 6 9H3v6h3l5 4V5Z" />
+          <path d="m19 9-6 6" />
+          <path d="m13 9 6 6" />
         }
         @case ('azure') {
           <path d="M3 18L12 4l9 14H3z" />
@@ -496,6 +508,10 @@ export interface WcModuleBreadcrumbItem {
     `
       :host {
         display: block;
+        position: sticky;
+        top: 0;
+        z-index: 60;
+        background: var(--sp-surface);
       }
       .sp-module-bc {
         display: flex;
@@ -505,6 +521,7 @@ export interface WcModuleBreadcrumbItem {
         padding: 10px 24px;
         background: var(--sp-surface);
         border-bottom: 1px solid var(--sp-border);
+        box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04), 0 6px 18px rgba(15, 23, 42, 0.06);
       }
       .sp-module-bc__link {
         display: inline-flex;

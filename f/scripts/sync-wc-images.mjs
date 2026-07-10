@@ -12,7 +12,6 @@ if (!existsSync(source)) {
 
 const targets = [
   join(root, 'public/assets/workspace-connect/images'),
-  join(root, 'src/assets/workspace-connect/images'),
 ];
 
 for (const target of targets) {

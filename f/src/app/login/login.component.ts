@@ -15,10 +15,12 @@ export class LoginComponent implements OnInit {
   @Input() loggedIn: boolean = false;
   @Output() loginClicked = new EventEmitter<void>();
   @Output() logoutClicked = new EventEmitter<void>();
+  @Output() guestLoginClicked = new EventEmitter<void>();
 
   isLogin: boolean = false;
   year: any;
   returnUrl: string = '';
+  environment = environment;
 
   constructor(
     public authService: AuthService,
@@ -42,6 +44,12 @@ export class LoginComponent implements OnInit {
     this.msalService.instance.loginRedirect({
       scopes: ['User.Read'],
     });
+  }
+
+  guestLogin() {
+    this.loginService.guestLogin();
+    this.authService.loggedIn = true;
+    this.guestLoginClicked.emit();
   }
 
   logout() {

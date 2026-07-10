@@ -1,19 +1,18 @@
-import { ChangeDetectorRef, Component, ElementRef, EventEmitter, HostListener, Input, NgZone, OnChanges, OnDestroy, OnInit, Output, SimpleChanges, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ChangeDetectorRef, Component, ElementRef, EventEmitter, HostListener, inject, Input, NgZone, OnChanges, OnDestroy, OnInit, Output, SimpleChanges, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeHtml, SafeResourceUrl } from '@angular/platform-browser';
 import { SelectDropDownModule, SelectDropDownService } from 'ngx-select-dropdown';
-import { MODULE_BRANDING, WC_CONNECTORS, SP_WORKSPACE, spFolderItemCountLabel } from '../core/workspace-connect.messages';
-import { WC_IMAGES } from '../core/workspace-connect.assets';
-import { SHAREPOINT_ENV } from '../core/workspace-connect.types';
-import { WorkspaceConnectIconComponent, WorkspaceConnectOrbitLoaderComponent, WorkspaceConnectStatusAlertsComponent } from '../core/workspace-connect.ui';
-import { ApplicationDto, ApplicationTypeCode, ApplicationTypeDto, FileKind, ProcessConfigSharePointSelection, RichPreviewMode, SharePointItemDto, SharePointLibraryDto, WorkspaceConnection } from '../core/workspace-connect.types';
-import { applicationTypeDisplayName, awaitApi, buildCurlCommands, buildUserSiteConnectRequest, buildWorkspaceBreadcrumbs, connectionFromApplication, connectionFromApplicationSite, copyCurlText, curlSampleFilePath, CurlModalResult, CurlStep, curlScriptFilename, defaultUserSiteInput, delay, detectFileKind, downloadCurlScript, emptyWorkspaceConnection, findDropdownOption, FolderNavHistory, formatFileSize, highlightCurl, mapApplicationSitesToDropdownOptions, mapApplicationsToDropdownOptions, mapInternalAppsToDropdownOptions, mapLibrariesToDropdownOptions, mapRegisteredSitesToDropdownOptions, mapUserDelegatedSitesToDropdownOptions, normalizeWorkspaceConfigMode, preferredLibraryNames, readWorkspacePrefs, registeredApplicationSites, removeWorkspacePrefs, resolveUnsupportedPreviewMessage, resolveWorkspaceLibraryName, sharePointFolderIconSrc, sharePointItemExtensionLabel, sharePointItemIconSrc, sortSharePointItems, SP_APP_DROPDOWN_CONFIG, SP_LIBRARY_DROPDOWN_CONFIG, SpDropdownOption, StatusAlerts, unwrapNgxDropdownSelection, usesRichPreviewHost, waitForDomHost, workspaceModeFromType, writeWorkspacePrefs, type WorkspaceFileDisplayMode } from '../core/workspace-connect.utils';
 import type { Observable } from 'rxjs';
+import { WC_IMAGES } from '../core/workspace-connect.assets';
+import { MODULE_BRANDING, SP_WORKSPACE, spFolderItemCountLabel, WC_CONNECTORS } from '../core/workspace-connect.messages';
+import { resolveTenantFilter, SharePointTenantHierarchyFilter, tenantFilterSignature } from '../core/workspace-connect.tenant';
+import { ApplicationDto, ApplicationTypeCode, ApplicationTypeDto, FileKind, ProcessConfigSharePointSelection, RichPreviewMode, SHAREPOINT_ENV, SharePointItemDto, SharePointLibraryDto, WorkspaceConnection } from '../core/workspace-connect.types';
+import { WorkspaceConnectIconComponent, WorkspaceConnectOrbitLoaderComponent, WorkspaceConnectStatusAlertsComponent } from '../core/workspace-connect.ui';
+import { applicationTypeDisplayName, awaitApi, buildCurlCommands, buildUserSiteConnectRequest, buildWorkspaceBreadcrumbs, connectionFromApplication, connectionFromApplicationSite, copyCurlText, CurlModalResult, curlSampleFilePath, curlScriptFilename, CurlStep, defaultUserSiteInput, delay, detectFileKind, downloadCurlScript, emptyWorkspaceConnection, findDropdownOption, FolderNavHistory, formatFileSize, highlightCurl, mapApplicationSitesToDropdownOptions, mapApplicationsToDropdownOptions, mapInternalAppsToDropdownOptions, mapLibrariesToDropdownOptions, mapRegisteredSitesToDropdownOptions, mapUserDelegatedSitesToDropdownOptions, normalizeWorkspaceConfigMode, preferredLibraryNames, readWorkspacePrefs, registeredApplicationSites, removeWorkspacePrefs, resolveUnsupportedPreviewMessage, resolveWorkspaceLibraryName, sharePointFolderIconSrc, sharePointItemExtensionLabel, sharePointItemIconSrc, sortSharePointItems, SP_APP_DROPDOWN_CONFIG, SP_LIBRARY_DROPDOWN_CONFIG, SpDropdownOption, StatusAlerts, unwrapNgxDropdownSelection, usesRichPreviewHost, waitForDomHost, workspaceModeFromType, writeWorkspacePrefs, type WorkspaceFileDisplayMode } from '../core/workspace-connect.utils';
 import { SharePointApiService } from '../services/sharepoint-api.service';
 import { SharePointFilePreviewService } from '../services/sharepoint-preview.service';
 import { SharePointUserApiService, SharePointUserAuthService } from '../services/sharepoint-user.service';
-import { SharePointTenantHierarchyFilter, tenantFilterSignature, resolveTenantFilter } from '../core/workspace-connect.tenant';
 
 @Component({
   selector: 'app-sharepoint-workspace',
@@ -1750,4 +1749,3 @@ export class SharepointWorkspaceComponent implements OnInit, OnChanges, OnDestro
     await this.applyExternalConnection();
   }
 }
-

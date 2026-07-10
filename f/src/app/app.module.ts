@@ -65,6 +65,7 @@ import { DatePicker } from 'primeng/datepicker';
 import { PaginatorModule } from 'primeng/paginator';
 import { ToastrModule } from 'ngx-toastr';
 import { ErrorInterceptor } from './core/interceptors/error.interceptor';
+import { GuestInterceptor } from './core/interceptors/guest.interceptor';
 import { ProcessedFileListComponent } from './processed-file-list/processed-file-list.component';
 import { FilePreviewComponent } from './new-process-configuration/file-preview/file-preview.component';
 import { AdGroupComponent } from './ad-group/ad-group.component';
@@ -100,20 +101,24 @@ const isIE =
   window.navigator.userAgent.indexOf('Trident/') > -1; // Remove this line to use Angular Universal
 
 export function MSALInterceptorConfigFactory(): MsalInterceptorConfiguration {
-  const protectedResourceMap = new Map<string, Array<string>>();
-  protectedResourceMap.set(`${environment.redirectUrl}weatherforecast`, [
-    `${environment.clientId}/.default`,
-  ]);
-  protectedResourceMap.set('https://graph.microsoft.com/v1.0/', [
-    'user.read', 'GroupMember.Read.All'
-  ]);
-  // #region Sharepoint Workspace - AY
-  protectedResourceMap.set(`${environment.sharepointApiBaseUrl}*`, null as unknown as string[]);
-  // #endregion
+  const scopes = [...environment.userGraphScopes];
+  const protectedResourceMap = new Map<string, Array<string> | null>();
+
+  // Graph API — requires MSAL token.
+  protectedResourceMap.set(environment.graphApiEndpoint, scopes);
+  protectedResourceMap.set(`${environment.graphApiEndpoint}/*`, scopes);
+
+  // SharePoint / DI API endpoints — handled by their own auth; MSAL must NOT touch these.
+  if (environment.sharepointApiBaseUrl?.trim()) {
+    protectedResourceMap.set(`${environment.sharepointApiBaseUrl}*`, null);
+  }
+  if (environment.apiEndpoint?.trim()) {
+    protectedResourceMap.set(`${environment.apiEndpoint}*`, null);
+  }
 
   return {
     interactionType: InteractionType.Redirect,
-    protectedResourceMap: protectedResourceMap,
+    protectedResourceMap,
   };
 }
 
@@ -230,6 +235,11 @@ export function MSALGuardConfigFactory(): MsalGuardConfiguration {
                 preset: Aura
             }
         }),
+    {
+      provide: HTTP_INTERCEPTORS,
+      useClass: GuestInterceptor,
+      multi: true,
+    },
     {
       provide: HTTP_INTERCEPTORS,
       useClass: MsalInterceptor,

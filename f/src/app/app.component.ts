@@ -13,6 +13,7 @@ import { MsalBroadcastService, MsalService } from '@azure/msal-angular';
 import { filter, Subject, takeUntil } from 'rxjs';
 import { InteractionStatus } from '@azure/msal-browser';
 import { TokenService } from './core/services/token.service';
+import { isGuestSession } from './core/guest/guest.util';
 // #region Sharepoint Workspace - AY
 import { SharePointUserAuthService } from './workspace-connect/services/sharepoint-user.service';
 // #endregion
@@ -71,9 +72,15 @@ export class AppComponent implements OnInit, OnDestroy {
       console.log(error);
     }
 
-    
+    if (isGuestSession()) {
+      this.onGuestLogin();
+    }
   }
   setLoginDisplay() {
+    if (isGuestSession()) {
+      this.onGuestLogin();
+      return;
+    }
     this.isLogin = this.msalService.instance.getAllAccounts().length > 0;
     if (this.isLogin) {
       this.loginService.setCurrentUser().then((val: boolean) => { if (val) this.onUserLogin(); });
@@ -121,6 +128,18 @@ export class AppComponent implements OnInit, OnDestroy {
         }, 1000);
       } //else this.onUserLogin();
     });
+  }
+  onGuestLogin() {
+    this.isLogin = true;
+    this.isLoad = true;
+    this.authService.loggedIn = true;
+    this.accessPermission = [
+      { component: 'ruleset-list' },
+      { component: 'profiling' },
+      { component: 'eib' },
+    ];
+    this.tokenService.setToken(localStorage.getItem('DIApiToken') ?? '');
+    this.router.navigate(['/dashboard']);
   }
   setDefaultUserGroup(token: string) {
     this.loginService.getUserGroup(token).subscribe({
