@@ -1,0 +1,75 @@
+-- 1. created tables
+select * from dbo.di_applicationtype;
+select * from dbo.di_application;
+select * from dbo.di_applicationsite;
+select * from dbo.di_flpSharePointSource;
+select * from dbo.di_sharepointlogs;
+select * from dbo.di_info_workspaceConnectAccess;
+
+-- 2. created procedures
+exec dbo.sel_applicationtypes;
+exec dbo.sel_application @Ownerkey = null, @Applicationtypeid = null, @Regionident = null, @Subregioncode = null, @Clientident = null, @Securitygroupid = null, @Includeinactive = 1;
+exec dbo.sel_applicationsites @Applicationid = null;
+exec dbo.sel_workspaceConnectAccess @securityGroupId = '00000000-0000-0000-0000-000000000001';
+-- sel_applicationbyid, commit_application, commit_applicationsites, commit_applicationdelete
+-- commit_InsertFlpSharePointSource, sel_flpSharePointSourceByConfigId, commit_sharepointlogs
+
+-- 3. edited table
+select * from dbo.di_flpConfiguration where processTypeId = 6;
+
+-- 4. edited procedures
+exec dbo.sel_flpConfigurationList @processTypeId = 6, @fileProcessingServerTypeId = null;
+-- commit_InsertFlpConfiguration, sel_processConfigurationById, sel_flpConfigurationList
+
+-- 5. referenced existing di objects
+select * from dbo.di_info_securityGroup where isnull(active, 1) = 1;
+select * from dbo.di_info_processType where processTypeId = 6;
+exec dbo.sel_GetProcessTypes;
+
+-- 6. current sharepoint process status, source path, timing and bronze destination
+select flp.flpConfigurationId, flp.process_name, flp.is_active as configurationActive, flp.created_date, flp.modified_date, a.displayname as applicationName, aps.sitename as siteName, sp.sharePointLibraryName, sp.sharePointFolderPath, sc.scheduleTypeId, st.schedulerType, sc.scheduleStartDate, sc.scheduleStartTime, sc.scheduleEndDate, sc.scheduleEndTime, ps.nextRun, ps.lastrun, ps.flpProcessStatusId, fps.statusName as processStatus, ctm.tableName as bronzeTableName, ctm.historyTableName, dc.databaseName as bronzeDatabaseName, dc.databaseServer, dc.databaseConnectionSecret
+from dbo.di_flpConfiguration flp
+left join dbo.di_flpSharePointSource sp on sp.flpConfigurationId = flp.flpConfigurationId and sp.active = 1
+left join dbo.di_application a on a.applicationid = sp.sharePointApplicationId
+left join dbo.di_applicationsite aps on aps.applicationsiteid = sp.sharePointApplicationSiteId
+left join dbo.di_flpSchedulerConfiguration sc on sc.flpConfigurationId = flp.flpConfigurationId and sc.active = 1
+left join dbo.di_info_schedulerType st on st.schedulerTypeId = sc.scheduleTypeId
+left join dbo.di_processScheduler ps on ps.flpConfigurationId = flp.flpConfigurationId and ps.active = 1
+left join dbo.di_info_flpProcessStatus fps on fps.id = ps.flpProcessStatusId
+left join dbo.di_configurationTableMapping ctm on ctm.flpConfigurationId = flp.flpConfigurationId and ctm.active = 1
+left join dbo.di_databaseConfiguration dc on dc.id = ctm.databaseConfigurationId
+where flp.processTypeId = 6
+order by flp.created_date desc;
+
+-- 7. configuration id specific complete view
+declare @flpConfigurationId nvarchar(100) = '740A76BB-B69A-426C-AB79-F22D0A7B0730';
+select * from dbo.di_flpConfiguration where flpConfigurationId = @flpConfigurationId;
+select * from dbo.di_flpSharePointSource where flpConfigurationId = @flpConfigurationId;
+select * from dbo.di_flpSchedulerConfiguration where flpConfigurationId = @flpConfigurationId;
+select * from dbo.di_processScheduler where flpConfigurationId = @flpConfigurationId;
+select * from dbo.di_flpFileConfiguration where flpConfigurationId = @flpConfigurationId;
+select * from dbo.di_configurationTableMapping where flpConfigurationId = @flpConfigurationId;
+select * from dbo.di_flpDestinationStorageAccountInfo where flpConfigurationId = @flpConfigurationId;
+select * from dbo.di_uploadedFile where flpConfigurationId = @flpConfigurationId order by CreationDateTime desc;
+
+-- 8. all bronze mappings for sharepoint processes
+select flp.flpConfigurationId, flp.process_name, ctm.tableName as bronzeTableName, ctm.historyTableName, ctm.databaseConfigurationId, dc.databaseName as bronzeDatabaseName, dc.databaseServer, dc.databaseConnectionSecret
+from dbo.di_flpConfiguration flp
+left join dbo.di_configurationTableMapping ctm on ctm.flpConfigurationId = flp.flpConfigurationId and ctm.active = 1
+left join dbo.di_databaseConfiguration dc on dc.id = ctm.databaseConfigurationId
+where flp.processTypeId = 6;
+
+-- 9. ingestion run / uploaded-file history
+select uf.* from dbo.di_uploadedFile uf inner join dbo.di_flpConfiguration flp on flp.flpConfigurationId = uf.flpConfigurationId where flp.processTypeId = 6 order by uf.CreationDateTime desc;
+
+-- 10. everything about a process by name
+declare @processName nvarchar(255) = 'di_euweseu';
+select * from dbo.di_flpConfiguration where process_name = @processName;
+select sp.* from dbo.di_flpSharePointSource sp inner join dbo.di_flpConfiguration flp on flp.flpConfigurationId = sp.flpConfigurationId where flp.process_name = @processName;
+select sc.* from dbo.di_flpSchedulerConfiguration sc inner join dbo.di_flpConfiguration flp on flp.flpConfigurationId = sc.flpConfigurationId where flp.process_name = @processName;
+select ps.* from dbo.di_processScheduler ps inner join dbo.di_flpConfiguration flp on flp.flpConfigurationId = ps.flpConfigurationId where flp.process_name = @processName;
+select ffc.* from dbo.di_flpFileConfiguration ffc inner join dbo.di_flpConfiguration flp on flp.flpConfigurationId = ffc.flpConfigurationId where flp.process_name = @processName;
+select ctm.*, dc.databaseName, dc.databaseServer, dc.databaseConnectionSecret from dbo.di_configurationTableMapping ctm inner join dbo.di_flpConfiguration flp on flp.flpConfigurationId = ctm.flpConfigurationId left join dbo.di_databaseConfiguration dc on dc.id = ctm.databaseConfigurationId where flp.process_name = @processName;
+select ds.* from dbo.di_flpDestinationStorageAccountInfo ds inner join dbo.di_flpConfiguration flp on flp.flpConfigurationId = ds.flpConfigurationId where flp.process_name = @processName;
+select a.* from dbo.di_application a inner join dbo.di_flpSharePointSource sp on sp.sharePointApplicationId = a.applicationid inner join dbo.di_flpConfiguration flp on flp.flpConfigurationId = sp.flpConfigurationId where flp.process_name = @processName;
+select uf.* from dbo.di_uploadedFile uf inner join dbo.di_flpConfiguration flp on flp.flpConfigurationId = uf.flpConfigurationId where flp.process_name = @processName order by uf.CreationDateTime desc;
