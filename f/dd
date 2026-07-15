@@ -62,14 +62,97 @@ where flp.processTypeId = 6;
 -- 9. ingestion run / uploaded-file history
 select uf.* from dbo.di_uploadedFile uf inner join dbo.di_flpConfiguration flp on flp.flpConfigurationId = uf.flpConfigurationId where flp.processTypeId = 6 order by uf.CreationDateTime desc;
 
--- 10. everything about a process by name
+-- 10. by process name: will it trigger, status, then update schedule
 declare @processName nvarchar(255) = 'di_euweseu';
-select * from dbo.di_flpConfiguration where process_name = @processName;
-select sp.* from dbo.di_flpSharePointSource sp inner join dbo.di_flpConfiguration flp on flp.flpConfigurationId = sp.flpConfigurationId where flp.process_name = @processName;
-select sc.* from dbo.di_flpSchedulerConfiguration sc inner join dbo.di_flpConfiguration flp on flp.flpConfigurationId = sc.flpConfigurationId where flp.process_name = @processName;
-select ps.* from dbo.di_processScheduler ps inner join dbo.di_flpConfiguration flp on flp.flpConfigurationId = ps.flpConfigurationId where flp.process_name = @processName;
-select ffc.* from dbo.di_flpFileConfiguration ffc inner join dbo.di_flpConfiguration flp on flp.flpConfigurationId = ffc.flpConfigurationId where flp.process_name = @processName;
-select ctm.*, dc.databaseName, dc.databaseServer, dc.databaseConnectionSecret from dbo.di_configurationTableMapping ctm inner join dbo.di_flpConfiguration flp on flp.flpConfigurationId = ctm.flpConfigurationId left join dbo.di_databaseConfiguration dc on dc.id = ctm.databaseConfigurationId where flp.process_name = @processName;
-select ds.* from dbo.di_flpDestinationStorageAccountInfo ds inner join dbo.di_flpConfiguration flp on flp.flpConfigurationId = ds.flpConfigurationId where flp.process_name = @processName;
-select a.* from dbo.di_application a inner join dbo.di_flpSharePointSource sp on sp.sharePointApplicationId = a.applicationid inner join dbo.di_flpConfiguration flp on flp.flpConfigurationId = sp.flpConfigurationId where flp.process_name = @processName;
-select uf.* from dbo.di_uploadedFile uf inner join dbo.di_flpConfiguration flp on flp.flpConfigurationId = uf.flpConfigurationId where flp.process_name = @processName order by uf.CreationDateTime desc;
+declare @flpConfigurationId nvarchar(100) = null; -- set id if same name has multiple rows
+
+-- trigger / status check
+select
+    flp.flpConfigurationId,
+    flp.process_name,
+    flp.is_active as configurationActive,
+    flp.processTypeId,
+    sp.sharePointLibraryName,
+    sp.sharePointFolderPath,
+    sc.scheduleTypeId,
+    st.schedulerType,
+    sc.scheduleStartDate,
+    sc.scheduleStartTime,
+    sc.scheduleEndDate,
+    sc.scheduleEndTime,
+    sc.active as scheduleActive,
+    ps.nextRun,
+    ps.lastrun,
+    ps.flpProcessStatusId,
+    fps.statusName as processStatus,
+    ps.active as schedulerActive,
+    getutcdate() as utcNow,
+    case
+        when flp.is_active <> 1 then 'no - configuration inactive'
+        when flp.processTypeId <> 6 then 'no - not sharepoint process'
+        when sc.flpConfigurationId is null or sc.active <> 1 then 'no - schedule inactive / missing'
+        when ps.flpConfigurationId is null or ps.active <> 1 then 'no - process scheduler inactive / missing'
+        when sc.scheduleEndDate is not null
+             and dateadd(second, datediff(second, cast('00:00:00' as time), coalesce(sc.scheduleEndTime, cast('23:59:59' as time))), cast(sc.scheduleEndDate as datetime2)) < getutcdate()
+            then 'no - schedule end date/time passed'
+        when sc.scheduleTypeId = 1
+             and dateadd(second, datediff(second, cast('00:00:00' as time), sc.scheduleStartTime), cast(sc.scheduleStartDate as datetime2)) > getutcdate()
+            then 'waiting - one-time start not reached'
+        when sc.scheduleTypeId <> 1 and ps.nextRun > getutcdate()
+            then 'waiting - nextRun not reached'
+        else 'yes - due for pickup by sel_flpConfigurationList'
+    end as willTriggerInDb
+from dbo.di_flpConfiguration flp
+left join dbo.di_flpSharePointSource sp on sp.flpConfigurationId = flp.flpConfigurationId and sp.active = 1
+left join dbo.di_flpSchedulerConfiguration sc on sc.flpConfigurationId = flp.flpConfigurationId and sc.active = 1
+left join dbo.di_info_schedulerType st on st.schedulerTypeId = sc.scheduleTypeId
+left join dbo.di_processScheduler ps on ps.flpConfigurationId = flp.flpConfigurationId and ps.active = 1
+left join dbo.di_info_flpProcessStatus fps on fps.id = ps.flpProcessStatusId
+where flp.process_name = @processName
+  and (@flpConfigurationId is null or flp.flpConfigurationId = @flpConfigurationId);
+
+-- related rows
+select * from dbo.di_flpConfiguration where process_name = @processName and (@flpConfigurationId is null or flpConfigurationId = @flpConfigurationId);
+select sp.* from dbo.di_flpSharePointSource sp inner join dbo.di_flpConfiguration flp on flp.flpConfigurationId = sp.flpConfigurationId where flp.process_name = @processName and (@flpConfigurationId is null or flp.flpConfigurationId = @flpConfigurationId);
+select sc.* from dbo.di_flpSchedulerConfiguration sc inner join dbo.di_flpConfiguration flp on flp.flpConfigurationId = sc.flpConfigurationId where flp.process_name = @processName and (@flpConfigurationId is null or flp.flpConfigurationId = @flpConfigurationId);
+select ps.* from dbo.di_processScheduler ps inner join dbo.di_flpConfiguration flp on flp.flpConfigurationId = ps.flpConfigurationId where flp.process_name = @processName and (@flpConfigurationId is null or flp.flpConfigurationId = @flpConfigurationId);
+select ctm.tableName as bronzeTableName, ctm.historyTableName, dc.databaseName, dc.databaseServer, dc.databaseConnectionSecret, ctm.* from dbo.di_configurationTableMapping ctm inner join dbo.di_flpConfiguration flp on flp.flpConfigurationId = ctm.flpConfigurationId left join dbo.di_databaseConfiguration dc on dc.id = ctm.databaseConfigurationId where flp.process_name = @processName and (@flpConfigurationId is null or flp.flpConfigurationId = @flpConfigurationId);
+select uf.* from dbo.di_uploadedFile uf inner join dbo.di_flpConfiguration flp on flp.flpConfigurationId = uf.flpConfigurationId where flp.process_name = @processName and (@flpConfigurationId is null or flp.flpConfigurationId = @flpConfigurationId) order by uf.CreationDateTime desc;
+
+-- update schedule to current utc
+update sc
+set sc.scheduleStartDate = cast(getutcdate() as date),
+    sc.scheduleStartTime = cast(getutcdate() as time(0)),
+    sc.scheduleEndDate = null,
+    sc.scheduleEndTime = null,
+    sc.active = 1,
+    sc.updationDateTime = getutcdate()
+from dbo.di_flpSchedulerConfiguration sc
+inner join dbo.di_flpConfiguration flp on flp.flpConfigurationId = sc.flpConfigurationId
+where flp.process_name = @processName
+  and (@flpConfigurationId is null or flp.flpConfigurationId = @flpConfigurationId);
+
+update ps
+set ps.nextRun = getutcdate(),
+    ps.starttime = getutcdate(),
+    ps.flpProcessStatusId = 0,
+    ps.active = 1,
+    ps.lastrun = null
+from dbo.di_processScheduler ps
+inner join dbo.di_flpConfiguration flp on flp.flpConfigurationId = ps.flpConfigurationId
+where flp.process_name = @processName
+  and (@flpConfigurationId is null or flp.flpConfigurationId = @flpConfigurationId);
+
+update flp
+set flp.is_active = 1
+from dbo.di_flpConfiguration flp
+where flp.process_name = @processName
+  and (@flpConfigurationId is null or flp.flpConfigurationId = @flpConfigurationId);
+
+-- re-check after update
+select flp.flpConfigurationId, flp.process_name, flp.is_active, sc.scheduleStartDate, sc.scheduleStartTime, sc.scheduleEndDate, sc.scheduleEndTime, ps.nextRun, ps.lastrun, ps.flpProcessStatusId, getutcdate() as utcNow
+from dbo.di_flpConfiguration flp
+left join dbo.di_flpSchedulerConfiguration sc on sc.flpConfigurationId = flp.flpConfigurationId and sc.active = 1
+left join dbo.di_processScheduler ps on ps.flpConfigurationId = flp.flpConfigurationId and ps.active = 1
+where flp.process_name = @processName
+  and (@flpConfigurationId is null or flp.flpConfigurationId = @flpConfigurationId);
