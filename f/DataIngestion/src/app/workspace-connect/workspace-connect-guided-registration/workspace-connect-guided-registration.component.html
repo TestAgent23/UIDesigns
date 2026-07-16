@@ -1,0 +1,370 @@
+<div class="gw" (pointerdown)="primeAudio()">
+  <div class="gw__vignette" aria-hidden="true"></div>
+  <div class="gw__backdrop" aria-hidden="true">
+    <span class="gw__blur gw__blur--a"></span>
+    <span class="gw__blur gw__blur--b"></span>
+    <span class="gw__blur gw__blur--c"></span>
+  </div>
+
+  <div class="gw__shell">
+    <header class="gw__topbar">
+      <button type="button" class="gw__exit" (click)="cancel($event)">
+        <sp-icon name="x" size="sm" />
+        <span>{{ m.cancel }}</span>
+      </button>
+      <div class="gw__topbar-meta">
+        <button
+          type="button"
+          class="gw__sound-toggle"
+          [class.gw__sound-toggle--on]="soundEnabled"
+          [attr.aria-pressed]="soundEnabled"
+          [attr.aria-label]="soundEnabled ? m.soundOff : m.soundOn"
+          (click)="toggleSound()">
+          <sp-icon [name]="soundEnabled ? 'volume' : 'volume-off'" size="sm" />
+          <span>{{ soundEnabled ? m.soundEnabled : m.soundMuted }}</span>
+        </button>
+        <span class="gw__step-count">{{ stepOfLabel }}</span>
+      </div>
+    </header>
+
+    <nav class="gw__phases" aria-label="Registration progress">
+      @for (phase of phaseTrack; track phase.id; let i = $index) {
+        <div
+          class="gw__phase-seg"
+          [class.gw__phase-seg--done]="phase.done"
+          [class.gw__phase-seg--active]="phase.active"
+          [attr.aria-current]="phase.active ? 'step' : null">
+          <span class="gw__phase-dot">
+            @if (phase.done) {
+              <sp-icon name="check" size="sm" />
+            } @else {
+              <span>{{ i + 1 }}</span>
+            }
+          </span>
+          <span class="gw__phase-label">{{ phase.label }}</span>
+        </div>
+      }
+    </nav>
+
+    <div class="gw__progress" role="progressbar" [attr.aria-valuenow]="progressPct" aria-valuemin="0" aria-valuemax="100">
+      <span class="gw__progress-fill" [style.width.%]="progressPct"></span>
+    </div>
+
+    <div class="gw__workspace">
+      <aside class="gw__visual" @visualFloat>
+        <div class="gw__visual-ribbon" aria-hidden="true"></div>
+        <div class="gw__visual-orbit" aria-hidden="true"></div>
+        <div class="gw__visual-glow" aria-hidden="true"></div>
+        <div class="gw__visual-core">
+          @switch (stepVisual.kind) {
+            @case ('logo') {
+              <sp-sharepoint-logo />
+            }
+            @case ('image') {
+              <img class="gw__visual-img" [src]="stepVisual.src" alt="" aria-hidden="true" />
+            }
+            @case ('icon') {
+              <sp-icon [name]="stepVisual.icon!" size="lg" />
+            }
+          }
+        </div>
+      </aside>
+
+      <div class="gw__focus-column">
+        <div class="gw__coach" [@coachSwap]="microStepId">
+          <sp-icon class="gw__coach-icon" [name]="currentMeta.icon" size="sm" />
+          <p class="gw__coach-text">{{ currentMeta.coach }}</p>
+        </div>
+
+        <main class="gw__stage" [@stepTransition]="stepAnimationCounter">
+          @if (status.error) {
+            <div class="gw__inline-alert gw__inline-alert--error" role="alert">
+              <sp-icon name="alert" size="sm" />
+              <span>{{ status.error }}</span>
+            </div>
+          }
+
+          <div class="gw__spotlight">
+            <h2 class="gw__question">{{ focusQuestion }}</h2>
+
+            @switch (microStepId) {
+              @case ('identity') {
+                <label class="gw__field" for="gw-tenant">
+                  <span class="gw__sr-only">{{ m.tenantLabel }}</span>
+                  <input
+                    id="gw-tenant"
+                    name="gw-tenant"
+                    type="text"
+                    class="gw__input"
+                    [placeholder]="m.tenantPlaceholder"
+                    [(ngModel)]="applicationForm.displayName"
+                    autofocus />
+                </label>
+              }
+
+              @case ('owner') {
+                <label class="gw__field" for="gw-owner">
+                  <span class="gw__sr-only">{{ m.reviewCardOwner }}</span>
+                  <input
+                    id="gw-owner"
+                    name="gw-owner"
+                    type="text"
+                    class="gw__input"
+                    [placeholder]="m.ownerPlaceholder"
+                    [(ngModel)]="applicationForm.owner"
+                    autofocus />
+                </label>
+              }
+
+              @case ('access') {
+                <div class="gw__field gw__field--wide">
+                  <sp-tenant-hierarchy
+                    [selection]="applicationForm.tenantHierarchy"
+                    (selectionChange)="onTenantHierarchyChange($event)" />
+                </div>
+              }
+
+              @case ('site-url') {
+                <label class="gw__field" for="gw-site-url">
+                  <span class="gw__sr-only">{{ m.siteUrlLabel }}</span>
+                  <div
+                    class="gw__url-wrap"
+                    [class.gw__url-wrap--parsing]="siteUrlParsing"
+                    [class.gw__url-wrap--parsed]="siteUrlParsed && !siteUrlParsing">
+                    <input
+                      id="gw-site-url"
+                      name="gw-site-url"
+                      type="url"
+                      class="gw__input"
+                      [placeholder]="m.siteUrlPlaceholder"
+                      [(ngModel)]="siteUrlInput"
+                      (input)="onSiteUrlChange()"
+                      (paste)="onSiteUrlPaste()"
+                      autofocus />
+                    @if (siteUrlParsing || siteUrlParsed) {
+                      <span class="gw__url-status" aria-live="polite">
+                        @if (siteUrlParsing) {
+                          <span class="gw__url-loader"></span>
+                          <span>{{ m.parsingUrl }}</span>
+                        } @else {
+                          <sp-icon name="check" size="sm" />
+                          <span>{{ m.urlParsed }}</span>
+                        }
+                      </span>
+                    }
+                  </div>
+                </label>
+              }
+
+              @case ('site-confirm') {
+                <div class="gw__confirm-card">
+                  <div class="gw__confirm-row">
+                    <sp-icon name="cloud" size="sm" />
+                    <span>{{ m.reviewCardHost }}</span>
+                    <strong>{{ siteParsedSnapshot?.hostName || resolveSiteHost(activeSite) || m.emptyValue }}</strong>
+                  </div>
+                  <div class="gw__confirm-row">
+                    <sp-icon name="folder" size="sm" />
+                    <span>{{ m.reviewCardSite }}</span>
+                    <strong>{{ siteParsedSnapshot?.siteName || activeSite.siteName || m.emptyValue }}</strong>
+                  </div>
+                  @if (siteParsedSnapshot?.libraryName || activeSite.libraryName) {
+                    <div class="gw__confirm-row">
+                      <sp-icon name="file" size="sm" />
+                      <span>{{ m.reviewCardLibrary }}</span>
+                      <strong>{{ siteParsedSnapshot?.libraryName || activeSite.libraryName }}</strong>
+                    </div>
+                  }
+                </div>
+              }
+
+              @case ('site-type') {
+                <div class="gw__type-grid">
+                  @for (type of typeOptions; track type.applicationTypeId) {
+                    <button
+                      type="button"
+                      class="gw__type-card"
+                      [class.gw__type-card--active]="applicationForm.applicationTypeId === type.applicationTypeId"
+                      (click)="setType(type.applicationTypeId)">
+                      <span class="gw__type-badge">
+                        @if (isInternalType(type.applicationTypeId)) {
+                          <img [src]="images.sharepointMark" alt="" aria-hidden="true" />
+                        } @else {
+                          <img [src]="images.hero.azure" alt="" aria-hidden="true" />
+                        }
+                      </span>
+                      <span class="gw__type-name">{{ type.displayName }}</span>
+                      <span class="gw__type-hint">{{ typeDescription(type.applicationTypeId) }}</span>
+                      @if (applicationForm.applicationTypeId === type.applicationTypeId) {
+                        <span class="gw__type-check"><sp-icon name="check" size="sm" /></span>
+                      }
+                    </button>
+                  }
+                </div>
+              }
+
+              @case ('entra-tenant') {
+                <label class="gw__field" for="gw-tenant-id">
+                  <span class="gw__field-hint">{{ WC_CONNECTORS.form.tenantId }}</span>
+                  <input
+                    id="gw-tenant-id"
+                    name="gw-tenant-id"
+                    type="text"
+                    class="gw__input gw__input--mono"
+                    [placeholder]="WC_CONNECTORS.form.guidPlaceholder"
+                    [(ngModel)]="applicationForm.tenantId"
+                    autofocus />
+                </label>
+              }
+
+              @case ('entra-client') {
+                <label class="gw__field" for="gw-client-id">
+                  <span class="gw__field-hint">{{ WC_CONNECTORS.form.clientId }}</span>
+                  <input
+                    id="gw-client-id"
+                    name="gw-client-id"
+                    type="text"
+                    class="gw__input gw__input--mono"
+                    [placeholder]="WC_CONNECTORS.form.guidPlaceholder"
+                    [(ngModel)]="applicationForm.clientId"
+                    autofocus />
+                </label>
+              }
+
+              @case ('entra-secret') {
+                <label class="gw__field" for="gw-client-secret">
+                  <span class="gw__field-hint">{{ WC_CONNECTORS.form.clientSecret }}</span>
+                  <div class="gw__secret">
+                    <input
+                      id="gw-client-secret"
+                      name="gw-client-secret"
+                      [type]="appSecretVisible ? 'text' : 'password'"
+                      class="gw__input"
+                      [(ngModel)]="applicationForm.clientSecret"
+                      autofocus />
+                    <button
+                      type="button"
+                      class="gw__secret-toggle"
+                      [attr.aria-label]="appSecretVisible ? WC_CONNECTORS.form.hideClientSecret : WC_CONNECTORS.form.showClientSecret"
+                      (click)="appSecretVisible = !appSecretVisible">
+                      <sp-icon [name]="appSecretVisible ? 'eye-off' : 'eye'" size="sm" />
+                    </button>
+                  </div>
+                </label>
+              }
+
+              @case ('verify') {
+                <div
+                  class="gw__verify"
+                  [class.gw__verify--checking]="connectivityTestState === 'checking'"
+                  [class.gw__verify--ok]="connectivityTestState === 'success'"
+                  [class.gw__verify--fail]="connectivityTestState === 'error'">
+                  <div class="gw__verify-visual" aria-hidden="true">
+                    @if (connectivityTestState === 'idle') {
+                      <span class="gw__radar"></span>
+                      <span class="gw__radar gw__radar--2"></span>
+                      <span class="gw__core"></span>
+                    }
+                    @if (connectivityTestState === 'checking') {
+                      <span class="gw__spin"></span>
+                    }
+                    @if (connectivityTestState === 'success') {
+                      <sp-icon name="check" size="lg" />
+                    }
+                    @if (connectivityTestState === 'error') {
+                      <sp-icon name="alert" size="lg" />
+                    }
+                  </div>
+                  <p class="gw__verify-msg">
+                    @switch (connectivityTestState) {
+                      @case ('checking') { {{ m.verifySubtitleTesting }} }
+                      @case ('success') { {{ m.verifySubtitleSuccess }} }
+                      @case ('error') { {{ connectivityError || m.verifySubtitleFailed }} }
+                      @default { {{ m.verifySubtitleIdle }} }
+                    }
+                  </p>
+                  @if (connectivityTestState === 'error') {
+                    <button type="button" class="gw__skip-inactive" (click)="skipToReview()">
+                      {{ m.registerAsInactive }}
+                    </button>
+                  }
+                </div>
+              }
+
+              @case ('library') {
+                <label class="gw__field" for="gw-library">
+                  <span class="gw__sr-only">{{ m.libraryTitle }}</span>
+                  <select
+                    id="gw-library"
+                    name="gw-library"
+                    class="gw__input gw__input--select"
+                    [ngModel]="activeSite.libraryName"
+                    (ngModelChange)="onLibraryChange($event)">
+                    <option value="">{{ m.emptyValue }}</option>
+                    @for (lib of availableLibraries; track lib.name) {
+                      <option [value]="lib.name">{{ lib.name }}</option>
+                    }
+                  </select>
+                </label>
+              }
+
+              @case ('review') {
+                <div class="gw__review-card">
+                  <div class="gw__confirm-row"><span>{{ m.reviewCardTenant }}</span><strong>{{ applicationForm.displayName }}</strong></div>
+                  <div class="gw__confirm-row"><span>{{ m.reviewCardOwner }}</span><strong>{{ applicationForm.owner }}</strong></div>
+                  <div class="gw__confirm-row"><span>{{ m.reviewCardType }}</span><strong>{{ selectedTypeName }}</strong></div>
+                  <div class="gw__confirm-row"><span>{{ m.reviewCardSite }}</span><strong>{{ activeSite.siteName }}</strong></div>
+                </div>
+              }
+
+              @case ('success') {
+                <div class="gw__success">
+                  <div class="gw__success-burst" aria-hidden="true"></div>
+                  <div class="gw__success-ring">
+                    <sp-icon name="check" size="lg" />
+                  </div>
+                  <p class="gw__success-msg">
+                    {{ savedApplication?.isActive === false
+                      ? m.successInactive(savedApplication?.displayName ?? '')
+                      : m.successActive(savedApplication?.displayName ?? '') }}
+                  </p>
+                  <button type="button" class="sp-btn sp-btn--primary gw__browse-btn" (click)="browseWorkspace()">
+                    <span>{{ m.browseNow }}</span>
+                    <sp-icon name="folder-open" size="sm" />
+                  </button>
+                </div>
+              }
+            }
+          </div>
+        </main>
+      </div>
+    </div>
+
+    @if (microStepId !== 'success') {
+      <footer class="gw__footer">
+        <button
+          type="button"
+          class="sp-btn sp-btn--secondary gw__back-btn"
+          [disabled]="isFirstMicroStep"
+          (click)="previousStep()">
+          <sp-icon name="back" size="sm" />
+          {{ m.back }}
+        </button>
+        <button
+          type="button"
+          class="sp-btn sp-btn--primary gw__continue-btn"
+          [class.gw__continue-btn--ready]="canContinue && !saving && !checkingConnectivity"
+          [disabled]="!canContinue || saving || checkingConnectivity"
+          (click)="continueStep()">
+          @if (saving || checkingConnectivity) {
+            <span class="sp-btn__spinner"></span>
+          }
+          <span>{{ continueLabel }}</span>
+          @if (!saving && !checkingConnectivity && microStepId !== 'verify') {
+            <sp-icon name="chevron-right" size="sm" />
+          }
+        </button>
+      </footer>
+    }
+  </div>
+</div>

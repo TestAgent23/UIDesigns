@@ -1,0 +1,497 @@
+.config-form {
+    flex: 1;
+    height: inherit;
+    display: flex;
+    flex-direction: column;
+    background: white;
+    padding: 15px;
+    padding: 15px;
+    border-radius: 5px;
+    overflow-x: auto;
+}
+
+.full-width {
+    width: 100%;
+}
+
+.left-section {
+    width: 90%;
+    word-break: break-all;
+    float: left;
+}
+
+.p-15 {
+    padding: 15px !important;
+}
+
+.border-bottom {
+    border-bottom: 1px solid #d1d1d1;
+    padding-bottom: 5px;
+    margin-bottom: 10px;
+}
+
+.p-15 {
+    padding: 15px !important;
+}
+
+.page-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--grey-14);
+    margin-bottom: 20px;
+}
+
+
+.btn-arrow {
+    background-color: #e9eeff !important;
+    border: 0px;
+    color: #73738b !important;
+    padding: 0px 5px !important;
+}
+
+.border-r {
+    border-radius: 30px;
+}
+
+
+.border-r {
+    border-radius: 30px;
+}
+
+.tab-setting {
+    flex: 1;
+    display: flex;
+    width: 100%;
+}
+
+.tab-setting>.nav {
+    display: flex;
+    flex-direction: column;
+    width: 30%;
+    max-width: 300px;
+    margin-right: 30px;
+    /* border-top: 1px solid var(--grey-6); */
+    border-bottom: 0px;
+}
+
+.button-section {
+    align-content: flex-end;
+    text-align: right;
+    padding: 15px 0px;
+}
+
+/* .base-setting {
+    padding: 10px 15px 10px;
+    background: #fff;
+    border-radius: 5px;
+} */
+
+.tab-setting .tab-content {
+    padding: 15px 20px !important;
+    background-color: #fff;
+    flex: 1;
+}
+
+/* SharePoint settings tab — browser-first, full height */
+.tab-content:has(#sharepoint-settings-tab-pane.active) {
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 168px);
+    max-height: calc(100vh - 168px);
+    min-height: 0;
+    padding: 4px 12px 0;
+    overflow: hidden;
+}
+
+#sharepoint-settings-tab-pane.active {
+    display: flex !important;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+}
+
+#sharepoint-settings-tab-pane.active .npc-sp-panel,
+#sharepoint-settings-tab-pane.active .npc-sp-card--workspace {
+    flex: 1;
+    min-height: 0;
+}
+
+/* Wizard footer — cohesive bar when SharePoint tab is active */
+.tab-content:has(#sharepoint-settings-tab-pane.active) .button-section {
+    margin-left: 260px;
+    margin-top: 0;
+    padding: 12px 24px 16px;
+    background: var(--background-01, #fff);
+    border-top: 1px solid var(--stroke-01, #dedae4);
+    box-shadow: 0 -4px 16px rgba(15, 23, 42, 0.06);
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+}
+
+@media (max-width: 1100px) {
+    .tab-content:has(#sharepoint-settings-tab-pane.active) .button-section {
+        margin-left: 0;
+    }
+}
+
+/*
+#myTabContent {
+    padding: 15px 10px 10px;
+} */
+
+.note {
+    color: #989898;
+    font-size: 10px;
+    font-style: italic;
+}
+
+.nav-tabs .nav-link {
+    border: none;
+}
+
+.nav-link {
+    color: #253788 !important;
+    font-size: 13px !important;
+    font-weight: 500;
+    padding: 20px 0px;
+    display: flex;
+    width: 100%;
+    align-items: center;
+    /* border-bottom: 1px solid var(--grey-6) !important; */
+}
+
+button.nav-link:disabled,
+button.nav-link[disabled] {
+    opacity: 0.5 !important;
+}
+
+.nav-link.active,
+.nav-link:hover,
+.nav-link.active:hover {
+    color: var(--grey-13) !important;
+    font-weight: 700;
+    /* border-bottom: 2px solid #253788 !important; */
+    background-color: transparent;
+}
+
+.nav-link>span {
+    padding: 0 20px;
+    flex: 1;
+    text-align: left;
+}
+
+.tab-icon {
+    font-size: 18px;
+    width: 24px;
+    height: 24px;
+    border-radius: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--grey-5);
+    color: var(--grey-10);
+    border-radius: 4px;
+}
+
+.active>.tab-icon {
+    background: #253788;
+    color: var(--grey-1);
+}
+
+select.modified-select {
+    padding-top: 0px !important;
+    text-align: left !important;
+    border: none;
+}
+
+.key-col {
+    margin-left: 20px;
+    margin-top: 2px;
+}
+
+.key-col-val {
+    color: var(--blue-5);
+    font-size: 12px;
+    font-weight: 400 !important;
+}
+
+.form-check-input:checked {
+    background-color: green !important;
+    border: 0;
+}
+
+.form-check-input:focus,
+.label::after,
+label.form-check-label:focus,
+.form-check-input::after,
+.form-check-input:not(:disabled):not(.disabled):active:focus {
+    color: black;
+    outline: 0;
+    border: 0;
+    box-shadow: 0 0 0 0.1rem green !important;
+}
+
+.f-17 {
+    font-size: 17px !important;
+}
+
+.bg-gray {
+    background-color: #f4f4f4;
+    padding: 5px 10px;
+}
+
+.center {
+    margin: 0 auto;
+}
+
+.custom-class {
+    position: relative;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+
+#uploadPanel {
+    flex: 1;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+#fileUploadPage {}
+
+#fileUploadPage {
+    height: 100%;
+    width: 100%;
+    display: flex;
+    --ff-settings-width: clamp(420px, 34vw, 540px);
+}
+
+#fileUploadPage.ff-process-settings-split {
+    gap: 14px;
+}
+
+.slide-left {}
+
+.slide-left {
+    background: #ffffff;
+    opacity: 1 !important;
+    -webkit-animation: slide-in 0.5s forwards;
+    -webkit-animation-delay: 2s;
+    animation: slide-in 0.5s forwards;
+    animation-delay: 2s;
+
+}
+
+.slide-left.open {
+    max-width: 600px;
+    width: 100%;
+    overflow: auto
+}
+
+#modifySettings {}
+
+.slide-left.open {
+    max-width: 600px;
+    width: 100%;
+    overflow: auto
+}
+
+#modifySettings {
+    background: var(--grey-1);
+    border-style: solid;
+    border-color: var(--grey-4);
+    border-width: 0px 1px 0px 1px;
+    /* padding: 20px 15px; */
+    display: block;
+    opacity: 0;
+}
+
+#modifySettings.open {}
+
+#modifySettings.open {
+    display: flex !important;
+    flex-direction: column;
+    height: 100%;
+    /* min-width: 25%; */
+    width: var(--ff-settings-width);
+    min-width: var(--ff-settings-width);
+    max-width: var(--ff-settings-width);
+    flex: 0 0 var(--ff-settings-width);
+    overflow-x: hidden;
+}
+
+.panel-header {}
+
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    padding: 20px 15px 0px;
+}
+
+.close-icon {}
+
+.close-icon {
+    cursor: pointer;
+}
+
+.ng-star-inserted {
+    padding: 0px !important;
+    align-content: top !important;
+}
+
+.base-setting,
+.button-section {}
+
+.ng-star-inserted {
+    padding: 0px !important;
+    align-content: top !important;
+}
+
+.base-setting,
+.button-section {
+    padding: 0 15px 10px;
+}
+
+.selected-groups {
+    margin-top: 10px;
+}
+
+.selected-groups .badge {}
+
+.selected-groups .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 10px;
+    font-size: 14px;
+}
+
+.rulesetarea {
+    background-color: #f7f7f7;
+}
+
+.rulesetarea {
+    background-color: #f7f7f7;
+    height: calc(100% - 222px);
+    overflow-y: auto;
+}
+
+ul.ruleset {
+    padding: 0;
+    margin: 0;
+}
+
+ul.ruleset li {
+    padding: 5px;
+    list-style: none;
+}
+
+.individual-ruleset {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: #E8E8E8;
+}
+
+.ruleset-name {
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+    width: calc(100% - 54px);
+}
+
+.ruleset-action {
+    min-width: 54px;
+    text-align: right;
+}
+
+.ruleset-action .material-icons-round {
+    font-size: 18px !important;
+}
+
+.f-13 {
+    font-size: 13px;
+}
+
+.f-13 b {
+    font-size: 11px;
+}
+
+.no-wrap {
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.cursor-pointer {
+    cursor: pointer;
+}
+
+.f-18 {
+    font-size: 18px !important;
+}
+
+@media screen and (max-width: 1080px) {
+    .tab-setting {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .tab-setting>.nav {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .nav-tab .nav-link {
+        padding: 10px 0px;
+    }
+}
+
+
+@keyframes blinkRed {
+    0% {
+        background-color: red;
+    }
+
+    50% {
+        background-color: transparent;
+    }
+
+    100% {
+        background-color: red;
+    }
+}
+
+.attention-blink {
+    animation: blinkRed 0.5s ease-in-out;
+    animation-iteration-count: 6;
+    /* 6 iterations = ~3 seconds */
+}
+
+.categoryColor {
+    color: #000000;
+}
+
+::ng-deep .npc-sg-select .ng-dropdown-panel .ng-option .npc-sg-option-text {
+    display: block;
+    max-width: 420px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+::ng-deep .npc-sg-select.ng-select-multiple .ng-select-container .ng-value {
+    max-width: 220px;
+}
+
+::ng-deep .npc-sg-select .npc-sg-tag-text {
+    display: inline-block;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: bottom;
+}

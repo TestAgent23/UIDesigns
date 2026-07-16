@@ -1,0 +1,438 @@
+/* @import url('material-symbols'); */
+/* @import url('material-icons/iconfont/material-icons.css'); */
+/* @import "primeng/resources/themes/lara-light-blue/theme.css"; */
+/* @import "primeng/resources/primeng.css"; */
+/* @import url('ngx-toastr/toastr'); */
+
+/* @import 'ngx-toastr/toastr-bs5-alert'; */
+
+/* Override Drawflow canvas cursor for node action links */
+.node-settings-link {
+  cursor: pointer !important;
+}
+
+:root {
+  --grey-1: #ffffff;
+  --grey-2: #fafafa;
+  --grey-3: #f7f7f7;
+  --grey-4: #f0f0f0;
+  --grey-5: #e6e6e6;
+  --grey-6: #dddddd;
+  --grey-7: #bfbfbf;
+  --grey-8: #989898;
+  --grey-9: #7b7b7b;
+  --grey-10: #5d5d5d;
+  --grey-11: #494949;
+  --grey-12: #3b3b3b;
+  --grey-13: #2e2e2e;
+  --grey-14: #1c1c1c;
+  --brand-primary: #2071d9;
+  --brand-secondary: #3047b0;
+  --brand-highlight: #cdf6ff;
+  --blue-1: #8fc2ff;
+  --blue-2: #089bff;
+  --blue-3: #1586ed;
+  --blue-4: #2a5cc5;
+  --blue-5: #253788;
+  --blue-6: #151f4c;
+  --blue-7: #0f1738;
+  --darkmode-1: #089bff;
+  --darkmode-2: #Bb86ff;
+  --error-1: #ff7575;
+  --error-2: #ff0202;
+  --error-text-border: #cc0000;
+  --error-button: #eb0027;
+  --warning-1: #ffe4b3;
+  --warning-2: #ffc966;
+  --warning-3: #ff8f00;
+  --warning-4: #fe7e4b;
+  --warning-5: #ff6f00;
+  --warning-6: #cf402c;
+  --warning-7: #ae201a;
+  --alert-1: #ffe450;
+  --alert-2: #ffdd57;
+  --alert-3: #ffc502;
+  --alert-4: #ee8605;
+  --success-1: #8be4bf;
+  --success-2: #33cf8d;
+  --success-3: #04b469;
+  --success-4: #009A58;
+  --content-1: #780096;
+  --content-2: #00d769;
+  --content-3: #0087ff;
+  --content-4: #ff5c00;
+  --content-5: #ff0082;
+  --content-6: #00ba96;
+  --content-7: #3047b0;
+  --content-8: #f5d200;
+}
+
+
+/* ---------------------------------------------------
+                            BASIC RESET
+      ----------------------------------------------------- */
+* {
+  margin: 0;
+  font-size: 14px;
+  font-family: Noto Sans, sans-serif;
+}
+
+body {
+  color: var(--grey-13);
+  background-color: #f4f4f4;
+  font-size: 14px;
+  overflow: hidden;
+}
+
+
+app-new-process-configuration {
+  height: 100%;
+  width: 100%;
+  padding: 20px;
+  display: flex;
+}
+
+app-new-process-configuration.ng-star-inserted {
+  height: 100%;
+  width: 100%;
+  padding: 0px !important;
+  display: flex;
+}
+
+/* -----------------------------------------------------
+                           TEXTS
+     ----------------------------------------------------- */
+
+.medium {
+  font-weight: 500;
+}
+
+.semi-bold {
+  font-weight: 600;
+}
+
+.bold {
+  font-weight: 700;
+}
+
+.text-xs {
+  font-size: 10px;
+}
+
+.text-sm {
+  font-size: 12px;
+}
+
+.page-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--grey-14);
+  margin-bottom: 20px;
+}
+
+
+
+/* -----------------------------------------------------
+                           BUTTONS
+     ----------------------------------------------------- */
+.link-btn {
+  color: var(--blue-4);
+  cursor: pointer;
+}
+
+.hide {
+  display: none;
+}
+
+
+/* -----------------------------------------------------
+                       BOOTSTRAP FORM
+     ----------------------------------------------------- */
+.form-label {
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.table-striped>tbody>tr:nth-of-type(odd)>* {
+  --bs-table-color-type: #2e2e2e;
+  --bs-table-bg-type: #f7f7f7;
+  padding: 9px 10px !important;
+}
+
+tbody td {
+  padding: 9px 10px !important;
+  position: relative;
+}
+
+thead>tr {
+  border-top: 1px solid var(--grey-6);
+  border-bottom: 1px solid var(--grey-6);
+}
+
+tbody>tr {
+  border-color: #f7f7f7;
+}
+
+.btn-table-drop.dropdown-toggle::after {
+  display: none !important;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--grey-6);
+  border-radius: 42px;
+  height: 98%;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--grey-8);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--grey-8);
+}
+
+/* -----------------------------------------------------
+                       MARGINS
+     ----------------------------------------------------- */
+.mb-sm {
+  margin-bottom: 10px;
+}
+
+.mb-md {
+  margin-bottom: 20px;
+}
+
+.mt-sm {
+  margin-top: 10px;
+}
+
+.mt-md {
+  margin-top: 20px;
+}
+
+
+
+.p-datatable .p-datatable-thead>tr>th {
+  padding: 9px 10px !important;
+  background: transparent;
+  border: 1px solid var(--grey-6) !important;
+  border-width: 1px 0px 1px 0px !important;
+  color: #2e2e2e !important;
+}
+
+
+
+.p-datatable .p-datatable-tbody>tr>td {
+  padding: 9px 10px !important;
+  color: #2e2e2e !important;
+  max-width: 200px;
+  word-break: break-all;
+}
+
+.p-paginator {
+  border: none;
+  justify-content: flex-end;
+}
+
+.p-datatable .p-datatable-tbody>tr {
+  background: white;
+}
+
+.p-datatable.p-datatable-striped .p-datatable-tbody>tr:nth-child(even) {
+  background: #fff;
+}
+
+.p-dropdown-items {
+  padding-left: 0px;
+}
+
+.p-paginator-rpp-options>.p-inputtext {
+  min-width: fit-content !important;
+}
+
+.apexcharts-canvas {
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+
+
+/** BOOSTRAP**/
+.btn-primary {
+  --bs-btn-color: #fff;
+  --bs-btn-bg: #253788;
+  --bs-btn-border-color: #253788;
+  --bs-btn-hover-color: #fff;
+  --bs-btn-hover-bg: #1586ED;
+  --bs-btn-hover-border-color: #1586ED;
+  /* --bs-btn-focus-shadow-rgb: 0, 175, 155; */
+  --bs-btn-active-color: #fff;
+  --bs-btn-active-bg: #253788;
+  --bs-btn-active-border-color: #253788;
+  --bs-btn-active-shadow: inset 0 4px 5px rgba(0, 0, 0, 0.22);
+  --bs-btn-disabled-color: #989898;
+  --bs-btn-disabled-bg: #E6E6E6;
+  --bs-btn-disabled-border-color: #E6E6E6;
+}
+
+::ng-deep .p-datepicker-icon {
+  margin-top: -6px;
+}
+
+.p-datepicker .p-datepicker-panel {
+  z-index: 999999 !important;
+  top: 40px !important;
+}
+
+::ng-deep .p-datepicker-panel {
+  z-index: 99999;
+}
+
+.p-datepicker-buttonbar {
+  display: none !important;
+}
+
+.p-inputtext {
+  padding: 0.62rem 0.75rem !important;
+  min-width: 220px;
+}
+
+.loader-logo {
+  width: 40px;
+  height: 40px;
+  margin: 0;
+  position: absolute;
+}
+
+.spinner-border {
+  border: var(--bs-spinner-border-width) solid #ffffff !important;
+  border-right-color: transparent !important;
+  position: absolute;
+  width: 100px;
+  height: 100px;
+  left: 0;
+  top: 0;
+}
+
+.icon-tpicon {
+  position: relative;
+}
+
+/* Keep the main app loader centered regardless of component style scoping. */
+#loaderDiv .loading {
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+
+#loaderDiv .icon-tpicon {
+  position: relative;
+  width: 100px;
+  height: 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#loaderDiv .spinner-border {
+  position: absolute;
+  inset: 0;
+  width: 100px;
+  height: 100px;
+  margin: auto;
+  border-width: 2px;
+  animation-duration: 1.5s;
+}
+
+#loaderDiv .loader-logo {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 40px;
+  height: 40px;
+  transform: translate(-50%, -50%);
+  margin: 0;
+}
+
+.f-12,
+.f-12>strong {
+  font-size: 12px;
+}
+
+.min-h {
+  min-height: 186px !important;
+}
+
+#chart {
+  height: 100%;
+  display: flex;
+}
+
+
+apx-chart {
+  width: 100% !important;
+}
+
+@media screen and (min-device-width: 1500px) and (max-device-width: 1649px) {
+  .mt-custom {
+    margin-top: 50px;
+  }
+}
+
+
+/* @media screen and (min-device-width: 1650px) and (max-device-width: 1919px){
+    .mt-custom{margin-top:30px;}
+} */
+
+@media screen and (min-device-width: 1920px) and (max-device-width: 2200px) {
+  apx-chart {
+    width: 78% !important;
+    margin: 0 auto
+  }
+}
+
+@media screen and (min-device-width: 2200px) and (max-device-width: 2500px) {
+  apx-chart {
+    width: 86% !important;
+  }
+}
+
+
+.p-datatable .p-datatable-thead>tr>th,
+.scroll-div .table thead>tr>th,
+.schema-content .table thead>tr>th {
+  position: -webkit-sticky !important;
+  position: sticky !important;
+  top: 0px !important;
+  z-index: 1 !important;
+  background: #f7f7f7 !important;
+}
+
+.p-datatable-wrapper {
+  max-height: calc(100vh - 300px);
+}
+
+app-file-preview {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+app-file-preview>form,
+app-file-preview>form>section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+@media screen and (max-width: 1080px) {
+  .p-datatable-wrapper {
+    max-height: fit-content !important;
+  }
+}

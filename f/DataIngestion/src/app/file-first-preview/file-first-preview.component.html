@@ -1,0 +1,631 @@
+<form class="p-3">
+    <!-- ================= PROCESS SETTINGS ================= -->
+    <div class="card mb-3">
+        <div class="card-header fw-bold d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
+            data-bs-target="#collapseProcessSettings" style="cursor:pointer">
+            Process Settings for {{ config.processName }}
+            <span class="material-symbols-outlined" style="font-size:18px">expand_more</span>
+        </div>
+        <div id="collapseProcessSettings" class="collapse show">
+            <div class="card-body row g-3">
+
+                <div class="col-md-3">
+                    <label class="form-label">Region :</label>
+                    <span>{{ config.region }}</span>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">Sub Region :</label>
+                    <span>{{ config.subRegion }}</span>
+                </div>
+
+                <div class="col-md-3">
+                    <label class="form-label">Client :</label>
+                    <span>{{ config.clientName }}</span>
+                </div>
+
+                <div class="row-12">
+                    <label class="form-label">Security Group :</label>
+                    <span>{{ securityGroups }}</span>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="card-body row g-3" *ngIf="validWorkSheets.length > 0">
+        <label class="col-sm-1 col-form-label">Sheets : </label>
+        <div class="col-md-11">
+            <ul class=" nav nav-tabs">
+                <li class="nav-item" *ngFor="let sheet of validWorkSheets ">
+
+                    <button class="nav-link" [class.active]="selectedSheet === sheet.sheetName"
+                        (click)="selectSheet(sheet.sheetName)">
+                        {{ sheet.sheetName }}
+                    </button>
+                </li>
+            </ul>
+        </div>
+    </div>
+    <!-- ================= ADDITIONAL SETTINGS ================= -->
+    <div class="card mb-3">
+        <div class="card-header fw-bold d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
+            data-bs-target="#collapseAdditionalSettings" style="cursor:pointer">
+            Additional Settings
+            <span class="material-symbols-outlined" style="font-size:18px">expand_more</span>
+        </div>
+        <div id="collapseAdditionalSettings" class="collapse show">
+            <ng-container *ngIf="navigateService.dataSource !== DataSourceTypes.LandingLayer">
+                <ng-container *ngIf="fileType === FileTypes.CommaSeparatedValues || fileType === FileTypes.TextFiles">
+
+                    <div class="card-body row g-3">
+
+                        <div class="col-md-3">
+                            <label class="form-label">Delimiter : </label>
+                            <span>{{ delimiter }}</span>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Quote Character : </label>
+                            <span>{{ config.txtQuoteCharacter }}</span>
+                        </div>
+                    </div>
+
+                    <div class="card-body">
+
+                        <!-- ================= HEADER SETTINGS ================= -->
+                        <div class="card mb-2 border">
+                            <div class="card-header fw-semibold justify-content-between d-flex"
+                                data-bs-toggle="collapse" data-bs-target="#collapseHeaderSettings"
+                                style="cursor:pointer">Header Settings
+                                <span class="material-symbols-outlined" style="font-size:18px">expand_more</span>
+                            </div>
+
+                            <div id="collapseHeaderSettings" class="collapse show">
+                                <div class="card-body row g-3">
+
+                                    <div class="col">
+                                        <div class="form-check mt-4">
+                                            <input type="checkbox" class="form-check-input"
+                                                [checked]="config.flexCheckHasHeaders" disabled>
+                                            <label class="form-check-label">File Has Header</label>
+                                        </div>
+                                    </div>
+                                    <div class="col">
+                                        <div class="form-check mt-4">
+                                            <input type="checkbox" class="form-check-input"
+                                                [checked]="config.spanish_to_english" disabled>
+                                            <label class="form-check-label">Convert Characters From Spanish To
+                                                English</label>
+                                        </div>
+                                    </div>
+                                    <div class="col">
+                                        <div class="form-check mt-4">
+                                            <input type="checkbox" class="form-check-input"
+                                                [checked]="config.roman_numerals_only" disabled>
+                                            <label class="form-check-label">Use Roman Numerals Only</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ================= DATA SETTINGS (within Additional Settings) ================= -->
+                        <div class="card mb-2 border" data-bs-toggle="collapse" data-bs-target="#collapseDataSettings"
+                            style="cursor:pointer">
+                            <div class="card-header fw-semibold justify-content-between d-flex">Data Settings
+                                <span class="material-symbols-outlined" style="font-size:18px">expand_more</span>
+                            </div>
+                            <div class="card-body row g-3">
+
+                                <div class="col-md-3">
+                                    <div class="form-check mt-4">
+                                        <input type="checkbox" class="form-check-input"
+                                            [checked]="config.flexCheckSkipEmptyLines" disabled>
+                                        <label class="form-check-label">Skip Empty Lines</label>
+                                    </div>
+                                </div>
+
+                                <div class="col-md-3">
+                                    <div class="form-check mt-4">
+                                        <input type="checkbox" class="form-check-input"
+                                            [checked]="config.do_not_archive_file" disabled>
+                                        <label class="form-check-label">Do Not Archive</label>
+                                    </div>
+                                </div>
+
+                                <div class="row-md-3">
+                                    <div class="form-check mt-4">
+                                        <input type="checkbox" class="form-check-input"
+                                            [checked]="config.ignore_duplicate_rows" disabled>
+                                        <label class="form-label">Ignore Duplicate Rows By :
+                                            {{config.order_by_column_list_name_sort_dir === 'asc' ? 'Ascending' :
+                                            'Descending'}}
+                                        </label>
+                                    </div>
+
+                                </div>
+
+                                <div class="row-md-3" *ngIf="config.key_columns.length > 0">
+                                    <label class="form-label">Key Columns : </label>
+                                    {{ config.key_columns }}
+                                </div>
+                                <div class="row-md-3" *ngIf="dedupColumnList.trim().length > 0">
+                                    <label class="form-label">Order By Columns For Dedup : </label>
+                                    {{ dedupColumnList }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ================= VALIDATION RULES ================= -->
+                    @if (ruleSet?.length > 0){
+                    <div class="card border" data-bs-toggle="collapse" data-bs-target="#collapseHeaderSettings"
+                        style="cursor:pointer">
+                        <div class="card-header fw-semibold" justify-content-between d-flex>
+                            Validation Rules
+                            <span class="material-symbols-outlined" style="font-size:18px">expand_more</span>
+                        </div>
+                        <div class="card-body">
+                            <div id="collapseHeaderSettings" class="collapse show">
+
+                                <p-table styleClass="p-datatable-striped" [value]="ruleSet" [paginator]="true"
+                                    [rows]="10" [rowsPerPageOptions]="[10,20,30]" [loading]="false" [scrollable]="true"
+                                    responsiveLayout="stack"
+                                    currentPageReportTemplate="Showing {first} to {last} of {totalRecords} entries"
+                                    showCurrentPageReport="true">
+                                    <ng-template pTemplate="header">
+                                        <tr>
+                                            <th>Row No.</th>
+                                            <th>Rule Description</th>
+                                        </tr>
+                                    </ng-template>
+                                    <ng-template pTemplate="body" let-rule let-rowIndex="rowIndex">
+                                        <tr>
+                                            <td>{{ rowIndex + 1 }}.</td>
+                                            <td>{{ rule.ruleDescription }}</td>
+                                        </tr>
+                                    </ng-template>
+                                </p-table>
+                            </div>
+                        </div>
+                    </div>
+                    }
+
+
+
+                </ng-container>
+                <ng-container *ngIf="fileType !== FileTypes.CommaSeparatedValues && fileType !== FileTypes.TextFiles">
+                    <!-- ===================== TABS ===================== -->
+
+
+                    <!-- ===================== SELECTED SHEET DETAILS ===================== -->
+                    <div class="card mt-3" *ngIf="selectedSheet">
+                        <!-- <div class="card-header fw-bold">
+                    Additional Settings for: {{ selectedSheet }}
+                </div> -->
+
+
+                        <div class="card-body row g-3">
+
+
+
+                            <div class="col-md-6">
+                                <label class="form-label">Delimiter : </label>
+                                <span>{{ delimiter }}</span>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Quote Character : </label>
+                                <span>{{ config.txtQuoteCharacter }}</span>
+                            </div>
+
+
+                        </div>
+
+                        <div class="card-body">
+
+                            <!-- ================= HEADER SETTINGS ================= -->
+                            <div class="card mb-2 border " data-bs-toggle="collapse"
+                                data-bs-target="#collapseHeaderSettings" style="cursor:pointer">
+                                <div class="card-header fw-semibold justify-content-between d-flex">
+                                    Header Settings
+                                    <span class="material-symbols-outlined" style="font-size:18px">expand_more</span>
+                                </div>
+                                <div id="collapseHeaderSettings" class="collapse show">
+                                    <div class="card-body row g-3">
+
+                                        <div class="col">
+                                            <div class="form-check mt-4">
+                                                <input type="checkbox" class="form-check-input"
+                                                    [checked]="config.flexCheckHasHeaders" disabled>
+                                                <label class="form-check-label">File Has Header</label>
+                                            </div>
+                                        </div>
+                                        <div class="col">
+                                            <div class="form-check mt-4">
+                                                <input type="checkbox" class="form-check-input"
+                                                    [checked]="config.spanish_to_english" disabled>
+                                                <label class="form-check-label">Convert Characters From Spanish To
+                                                    English</label>
+                                            </div>
+                                        </div>
+                                        <div class="col">
+                                            <div class="form-check mt-4">
+                                                <input type="checkbox" class="form-check-input"
+                                                    [checked]="config.roman_numerals_only" disabled>
+                                                <label class="form-check-label">Use Roman Numerals Only</label>
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- ================= DATA SETTINGS (within Additional Settings) ================= -->
+                            <div class="card mb-2 border" data-bs-toggle="collapse"
+                                data-bs-target="#collapseDataSettings" style="cursor:pointer">
+                                <div class="card-header fw-semibold justify-content-between d-flex"> Data Settings
+                                    <span class="material-symbols-outlined" style="font-size:18px">expand_more</span>
+                                </div>
+                                <div id="collapseDataSettings" class="collapse show">
+                                    <div class="card-body row g-3">
+
+                                        <div class="col-md-3">
+                                            <div class="form-check mt-4">
+                                                <input type="checkbox" class="form-check-input"
+                                                    [checked]="config.flexCheckSkipEmptyLines" disabled>
+                                                <label class="form-check-label">Skip Empty Lines</label>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-md-3">
+                                            <div class="form-check mt-4">
+                                                <input type="checkbox" class="form-check-input"
+                                                    [checked]="config.do_not_archive_file" disabled>
+                                                <label class="form-check-label">Do Not Archive</label>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-md-3">
+                                            <div class="form-check mt-4">
+                                                <input type="checkbox" class="form-check-input"
+                                                    [checked]="config.ignore_duplicate_rows" disabled>
+                                                <label class="form-label">Ignore Duplicate Rows By :
+                                                    {{config.order_by_column_list_name_sort_dir === 'asc' ? 'Ascending'
+                                                    : 'Descending'}}
+                                                </label>
+                                            </div>
+
+
+
+                                        </div>
+
+                                        <div class="col-md-3" *ngIf="config.key_columns.length > 0">
+                                            <label class="form-label">Key Columns : </label>
+                                            {{ config.key_columns }}
+                                        </div>
+                                        <div class="col-md-3" *ngIf="dedupColumnList.trim().length > 0">
+                                            <label class="form-label">Order By Columns For Dedup : </label>
+                                            {{ dedupColumnList }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- ================= VALIDATION RULES ================= -->
+                            @if (ruleSet?.length > 0){
+                            <div class="card border" data-bs-toggle="collapse"
+                                data-bs-target="#collapseValidationRuleCSVSettings" style="cursor:pointer">
+                                <div class="card-header fw-semibold justify-content-between d-flex">
+                                    Validation Rules {{selectedSheet ? ' - ' + selectedSheet : ''}}
+                                    <span class="material-symbols-outlined" style="font-size:18px">expand_more</span>
+                                </div>
+
+                                <div class="card-body">
+                                    <div id="collapseValidationRuleCSVSettings" class="collapse show">
+
+                                        <p-table styleClass="p-datatable-striped" [value]="ruleSet" [paginator]="true"
+                                            [rows]="10" [rowsPerPageOptions]="[10,20,30]" [loading]="false"
+                                            [scrollable]="true" responsiveLayout="stack"
+                                            currentPageReportTemplate="Showing {first} to {last} of {totalRecords} entries"
+                                            showCurrentPageReport="true">
+                                            <ng-template pTemplate="header">
+                                                <tr>
+                                                    <th>Row No.</th>
+                                                    <th>Rule Description</th>
+                                                </tr>
+                                            </ng-template>
+                                            <ng-template pTemplate="body" let-rule let-rowIndex="rowIndex">
+                                                <tr>
+                                                    <td>{{ rowIndex + 1 }}.</td>
+                                                    <td>{{ rule.ruleDescription }}</td>
+                                                </tr>
+                                            </ng-template>
+                                        </p-table>
+                                    </div>
+                                </div>
+                            </div>
+                            }
+
+                        </div>
+                    </div>
+                </ng-container>
+            </ng-container>
+            @if(navigateService.dataSource === DataSourceTypes.LandingLayer){
+
+            <div class="card-body row g-3">
+                <label class="form-label">Validation Criteria</label>
+                <div class="col-md-3">
+                    <label class="form-label">Extension : </label>
+                    <ol>
+                        <li *ngFor="let ext of selectedExtensions">{{ ext }}</li>
+                    </ol>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Regular Expression : </label>
+                    <ol>
+                        <li *ngFor="let regex of regexForDisplay">{{ regex }}</li>
+                    </ol>
+                </div>
+            </div>
+            <div class="card-body row g-3">
+                <label class="form-label">Naming Convention</label>
+                <div class="col-md-3">
+                    <label class="form-label">Prefix : </label>
+                    {{ config.landingLayerPrefix }}
+                </div>
+                <div class="col-md-3">
+                    <span class="material-symbols-outlined me-2" style="font-size: 15px;cursor: pointer;"
+                        title="Default yyyy-MM-dd. Example: 2024-12-31. ">
+                        help
+                    </span>
+                    <label class="form-label">Date : </label>
+                    {{ dateFormatDisplay }}
+                </div>
+                <div class="col-md-3">
+                    <span class="material-symbols-outlined me-2" style="font-size: 15px;cursor: pointer;"
+                        title="Default HHMMSS. Example: 145959. ">
+                        help
+                    </span>
+                    <label class="form-label">Time : </label>
+                    {{ timeFormatDisplay }}
+                </div>
+            </div>
+            }
+
+
+        </div>
+
+
+    </div>
+
+    <!-- ================= DATABASE SETTINGS ================= -->
+    <div class="card mb-3">
+        <div class="card-header fw-bold d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
+            data-bs-target="#collapseDatabaseSettings" style="cursor:pointer">
+            {{ getDestinationDisplay() }}
+            <span class="material-symbols-outlined" style="font-size:18px">expand_more</span>
+        </div>
+        <div id="collapseDatabaseSettings" class="collapse show">
+            <div class="card-body row g-3">
+
+                <ng-container *ngIf="navigateService.dataSource === DataSourceTypes.DataBricks">
+                    <div class="col-md-4">
+                        <label class="form-label">Storage Account : </label>
+                        {{config.deltaStorageAccountIdDisplayName}}
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Container Name : </label> {{config.deltaContainerName}}
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Lineage Name : </label> {{config.deltaSource}}
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Delta Table Name : </label> {{config.deltaTableName}}
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Unity Catalog : </label> {{config.databaseName}}
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Job Id : </label> {{config.deltaJobId}}
+                    </div>
+                </ng-container>
+
+                <ng-container *ngIf="navigateService.dataSource === DataSourceTypes.Default">
+
+                    <div class="col-md-4">
+                        <label class="form-label">Database Name : </label> {{config.databaseName}}
+                    </div>
+
+                    <div class="col-md-4">
+                        <label class="form-label">Table Name : </label> {{config.tableName}}
+                    </div>
+                </ng-container>
+
+                <div class="row" *ngIf="navigateService.dataSource !== DataSourceTypes.LandingLayer">
+                    <div class="col">
+                        <div class=" form-check">
+                            <input type="checkbox" class="form-check-input" [checked]="config.drop_main_table" disabled>
+                            <label class="form-check-label">Drop Main Table</label>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" [checked]="config.validate_fileschema"
+                                disabled>
+                            <label class="form-check-label">Validate Schema</label>
+                        </div>
+                    </div>
+
+                    <div class="col">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" [checked]="config.mergeData" disabled>
+                            <label class="form-check-label">Allow Overwrite (DB)</label>
+                        </div>
+                    </div>
+
+                    <div class="col">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" [checked]="config.createHistoryTable"
+                                disabled>
+                            <label class="form-check-label">Save Overwrite Log</label>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="row" *ngIf="navigateService.dataSource === DataSourceTypes.LandingLayer">
+
+                    <div class="col-md-4">
+                        <label class="form-label">Storage Account: </label>
+                        {{config.deltaStorageAccountIdDisplayName}}
+                    </div>
+
+                    <div class="col-md-4 mb-2">
+                        <label class="form-label">Container Name: </label> {{config.deltaContainerName}}
+                    </div>
+
+                    <label class="mb-3 form-label">Lineage Path</label>
+                    <div class="col-md-4">
+                        <label class="form-label">Accepted Path: </label> {{config.landingLayerAcceptedPath}}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Rejected Path: </label> {{config.landingLayerRejectedPath}}
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= COLUMN MAP TABLE ================= -->
+
+    @if (navigateService.dataSource !== DataSourceTypes.LandingLayer) {
+    <div class="card">
+        <div class="card-header fw-bold d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
+            data-bs-target="#collapseColumnMapping" style="cursor:pointer">
+            Column Mapping {{selectedSheet ? ' - ' + selectedSheet : ''}}
+            <span class="material-symbols-outlined" style="font-size:18px">expand_more</span>
+        </div>
+        <div id="collapseColumnMapping" class="collapse show">
+
+            <div class="table-responsive">
+                <!-- <table class="table table-striped align-middle">
+                <thead>
+                    <tr>
+                        <th class="cname">File Column Name</th>
+                        <th>Database Column Name</th>
+                        <th>DataType</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let col of columnDataType; let i = index">
+                        <td>{{ col.ColumnName }}</td>
+                        <td>{{ col.DbColumnName }}</td>
+                        <td>
+                            {{ col.DatatypeName }}
+                            <span *ngIf="col.dateTimeFormatId">()</span>
+                        </td>
+                    </tr>
+                </tbody>
+            </table> -->
+
+                <p-table styleClass="p-datatable-striped" [value]="includedColumnDataType" [paginator]="true" [rows]="10"
+                    [rowsPerPageOptions]="[10,20,30]" [loading]="false" [scrollable]="true" responsiveLayout="stack"
+                    currentPageReportTemplate="Showing {first} to {last} of {totalRecords} entries"
+                    showCurrentPageReport="true">
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th>Row No.</th>
+                            <th>Column Name</th>
+                            <th>DB Column Name</th>
+                            <th>Datatype Name</th>
+                        </tr>
+                    </ng-template>
+                    <ng-template pTemplate="body" let-column let-rowIndex="rowIndex">
+                        <tr>
+                            <td>{{ rowIndex + 1 }}.</td>
+                            <td>
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <!-- Primary Key Icon -->
+                                    <!-- @if (column.ColumnKey) {
+                                    <span class="material-symbols-outlined" style="color:#f59e0b;" title="Primary Key">
+                                        key
+                                    </span>
+                                    } -->
+                                    {{ column.ColumnName }}
+                                </div>
+                            </td>
+                            <td>
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <!-- Validation Rule Icon -->
+                                    <!-- @if (hasValidationRule(column.ColumnName)) {
+                                    <span class="material-symbols-outlined" style="color:#3b82f6;"
+                                        title="Has Validation Rule">
+                                        rule
+                                    </span>
+                                    } -->
+
+                                    {{ column.DbColumnName }}
+                                </div>
+                            </td>
+                            <td>{{ column.DatatypeName }}
+                                <span *ngIf="column.dateTimeFormatId">()</span>
+                            </td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+        </div>
+
+    </div>
+    }
+
+    @if (navigateService.dataSource === DataSourceTypes.LandingLayer) {
+    <div class="card">
+        <div class="card-header fw-bold d-flex justify-content-between align-items-center" data-bs-toggle="collapse"
+            data-bs-target="#collapseYourFiles" style="cursor:pointer">
+            Your Files
+            <span class="material-symbols-outlined" style="font-size:18px">expand_more</span>
+        </div>
+        <div id="collapseYourFiles" class="collapse show">
+
+            <p-table styleClass="p-datatable-striped" [value]="selectedFiles" [paginator]="true" [rows]="10"
+                [rowsPerPageOptions]="[10,20,30]" [loading]="false" [scrollable]="true" responsiveLayout="stack"
+                currentPageReportTemplate="Showing {first} to {last} of {totalRecords} entries"
+                showCurrentPageReport="true">
+                <ng-template pTemplate="header">
+                    <tr>
+                        <th>#</th>
+                        <th>File Name</th>
+                        <th>Type</th>
+                        <th>Size (MB)</th>
+                        <th>Status</th>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="body" let-file let-rowIndex="rowIndex">
+                    <tr [class]="{'invalid-row': file.status === 'invalid'}">
+                        <td>{{ rowIndex + 1 }}</td>
+                        <td>{{ file.File.name }}</td>
+                        <td>{{ file.File.type || 'N/A' }}</td>
+                        <td>{{ (file.File.size / (1024 * 1024)) | number:'1.1-4' }}</td>
+                        <td>{{file.status}}</td>
+                    </tr>
+                </ng-template>
+                <ng-template pTemplate="emptymessage">
+                    <tr>
+                        <td colspan="6" class="text-center">
+                            <img src="no-data-found.svg" class="no-data" />
+                            <h3 class="pb-2">No Files Found!</h3>
+                        </td>
+                    </tr>
+                </ng-template>
+            </p-table>
+        </div>
+    </div>
+    }
+</form>

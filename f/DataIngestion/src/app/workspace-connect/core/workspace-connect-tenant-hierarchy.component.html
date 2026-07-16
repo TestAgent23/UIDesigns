@@ -1,0 +1,74 @@
+<fieldset class="sp-reg-access-field" [class.sp-reg-access-field--toolbar]="filterToolbar">
+  <legend class="sp-reg-access-field__legend" *ngIf="!collapsible && showLegend && !filterToolbar">{{ m.sectionTitle }}
+  </legend>
+  <legend class="sp-reg-access-field__legend sp-reg-access-field__legend--toggle" *ngIf="collapsible">
+    <button type="button" class="sp-reg-access-field__toggle" (click)="toggleOpen()" [attr.aria-expanded]="open"
+      [attr.aria-controls]="accessBodyId">
+      <sp-icon class="sp-reg-access-field__chev" [class.sp-reg-access-field__chev--open]="open" name="chevron-right"
+        size="sm" />
+      <span class="sp-reg-access-field__title">{{ m.sectionTitle }}</span>
+      <span class="sp-reg-access-field__badge" [class.sp-reg-access-field__badge--configured]="configured">
+        {{ configured ? m.configuredBadge : m.requiredBadge }}
+      </span>
+    </button>
+  </legend>
+  <div class="sp-grid sp-tenant-grid" [class.sp-grid--2]="!filterToolbar" [class.sp-grid--toolbar]="filterToolbar"
+    *ngIf="open" [id]="accessBodyId">
+    <div class="sp-field">
+      <label [attr.for]="'sp-region-' + compact">
+        {{ m.region }}<span class="sp-required" *ngIf="!filterToolbar" [attr.aria-label]="m.requiredAria"> *</span>
+      </label>
+      <ng-select class="sp-select" [id]="'sp-region-' + compact" [items]="regions" bindLabel="name" bindValue="id"
+        appendTo="body" [loading]="regionLoading" [searchable]="true" [clearable]="false" [placeholder]="m.selectRegion"
+        [(ngModel)]="selectedRegionId" (ngModelChange)="onRegionChange($event)">
+      </ng-select>
+    </div>
+
+    <div class="sp-field">
+      <label [attr.for]="'sp-subregion-' + compact">{{ m.subRegion }}</label>
+      <ng-select class="sp-select" [id]="'sp-subregion-' + compact" [items]="subRegions" bindLabel="name" bindValue="id"
+        appendTo="body" [loading]="subRegionLoading" [searchable]="true" [clearable]="true"
+        [disabled]="!selection.regionIdent" [placeholder]="m.allSubRegions" [(ngModel)]="selectedSubRegionCode"
+        (ngModelChange)="onSubRegionChange($event)">
+      </ng-select>
+    </div>
+
+    <div class="sp-field">
+      <label [attr.for]="'sp-client-' + compact">Client</label>
+      <ng-select class="sp-select" [id]="'sp-client-' + compact" [items]="clients" bindLabel="name" bindValue="id"
+        appendTo="body" [loading]="clientLoading" [searchable]="true" [clearable]="true"
+        [disabled]="!selection.regionIdent" [placeholder]="m.allClients" [(ngModel)]="selectedClientId"
+        (ngModelChange)="onClientChange($event)">
+      </ng-select>
+    </div>
+
+    <div class="sp-field sp-field--sg">
+      <label [attr.for]="'sp-security-group-' + compact">{{ m.securityGroup }}</label>
+      <div class="sp-sg-field">
+        <input class="sp-input" [id]="'sp-security-group-' + compact" type="text"
+          [placeholder]="m.securityGroupPlaceholder" [attr.title]="m.securityGroupHint"
+          [ngModel]="securityGroupSearchTerm" (ngModelChange)="onSecurityGroupSearch($event)" />
+        <button type="button" class="sp-sg-field__clear" *ngIf="hasSelectedSecurityGroups"
+          (click)="clearSecurityGroup()" [attr.aria-label]="m.clearSecurityGroup">
+          <sp-icon name="x" size="sm" />
+        </button>
+      </div>
+      <div class="sp-sg-chips" *ngIf="hasSelectedSecurityGroups">
+        <span class="sp-sg-chip" *ngFor="let group of selectedSecurityGroups">
+          <span class="sp-sg-chip__text">{{ group.name }}</span>
+          <button type="button" class="sp-sg-chip__remove" (click)="removeSecurityGroup(group.id)"
+            [attr.aria-label]="m.clearSecurityGroup">
+            <sp-icon name="x" size="sm" />
+          </button>
+        </span>
+      </div>
+      <ul class="sp-sg-field__list" *ngIf="availableSecurityGroups.length">
+        <li *ngFor="let group of availableSecurityGroups">
+          <button type="button" class="sp-sg-field__option" (click)="selectSecurityGroup(group)">
+            {{ group.name }}
+          </button>
+        </li>
+      </ul>
+    </div>
+  </div>
+</fieldset>

@@ -1,0 +1,79 @@
+.panel-header {
+    display: flex;
+    justify-content: space-between;
+    padding: 20px 15px;
+    background-color: #ececec;
+}
+
+.flex-column{flex-direction: column;}
+.justify-between{justify-content: space-between; }
+.h-80{height: 90%;
+    overflow-y: auto;}
+.border-bottom-1{border-bottom: #e1e1e1 1px solid;
+    padding: 8px 5px;}
+.status-indi-holder {
+    background: white;
+    position: absolute;
+    width: 24px;
+    height: 24px;
+    border-radius: 100%;
+    left: -5px;
+    top: -4px;
+    padding: 5px;
+}
+
+.status-indicator {
+    width: 15px;
+    height: 15px;
+    border-radius: 100%;
+    outline: 1px solid #989898;
+    /* margin-right: 10px;
+    position: absolute; */
+    background-color: var(--grey-1);
+}
+
+.eib-bp-mapped-list {
+    display: flex;
+    position: relative;
+    min-height: 50px;
+}
+
+.status-list-container {
+    margin: 15px auto;
+    padding: 0px;
+    text-align: left;
+}
+
+.status-name,
+.status-list.skipped .status-name {
+    font-weight: 500;
+    color: #989898;
+    letter-spacing: 0.3px;
+}
+
+
+/* component.css */
+.file-item {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    margin: .25rem 0;
+}
+
+.file-link {
+    text-decoration: underline;
+    color: #2b5fca;
+    /* or your theme color */
+    overflow-wrap: anywhere;
+}
+
+.download-link {
+  color: #0b5ed7;         /* link color */
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.download-link:focus {
+  outline: 2px solid #80bdff;
+  outline-offset: 2px;
+}

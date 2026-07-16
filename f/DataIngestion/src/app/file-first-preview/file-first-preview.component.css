@@ -1,0 +1,24 @@
+.cname {
+  word-break: break-all;
+}
+
+/* Target the input specifically when disabled */
+.form-check-input:disabled {
+    opacity: 1;
+    cursor: default;
+    background-color: #fff; /* Match your active background color */
+    border-color: #dee2e6;  /* Match your active border color */
+}
+
+/* Ensure the label text doesn't look faded */
+.form-check-input:disabled ~ .form-check-label {
+    opacity: 1;
+    color: inherit;
+}
+
+/* If using Bootstrap, override the checkmark color for checked+disabled */
+.form-check-input:checked:disabled {
+    background-color: #0d6efd; /* Standard Bootstrap blue */
+    border-color: #0d6efd;
+    filter: none; /* Removes the greyscale effect */
+}

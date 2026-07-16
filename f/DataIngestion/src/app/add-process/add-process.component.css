@@ -1,0 +1,17 @@
+#addProcessPage {
+    padding: 20px;
+    height: 100%;
+    overflow: auto !important;
+}
+
+.processPanel {
+    height: 100%;
+    overflow: auto;
+    /* background: #fff;
+    padding-top: 10px;
+    border-radius: 5px; */
+}
+
+.base-setting {
+    width: 70% !important;
+}

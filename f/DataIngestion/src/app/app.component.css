@@ -1,0 +1,44 @@
+/* ---------------------------------------------------
+                    LOADER/SPINNER
+----------------------------------------------------- */
+
+.loading {
+    z-index: 99999 !important;
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    border: 0;
+    background: rgb(255 255 255 / 0.9);
+    padding-top: calc(50vh - 50px);
+    padding-left: calc(50vw - 50px);
+}
+
+.loading .spinner-border {
+    width: 100px;
+    height: 100px;
+    display: block;
+    position: absolute;
+    border-width: 2px;
+    animation-duration: 1.5s;
+}
+
+.loading .icon-tpicon {
+    position: relative;
+    width: 100px;
+    height: 100px;
+    display: flex;
+    align-content: center;
+    z-index: 99999 !important;
+}
+
+.loading .loader-logo {
+    position: absolute;
+    width: 40px;
+    height: 40px;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    margin: 0 !important;
+}
