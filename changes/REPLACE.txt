@@ -1,0 +1,91 @@
+SharePoint Workspace Connect - production replace pack
+======================================================
+Date: 2026-07-20
+Source of files: Integration_project (synced from LocalTestingOnly)
+
+Folder layout:
+  changes/api/          -> drop into Teleperformance.DataIngestion.API parent (paths preserved)
+  changes/functionapp/  -> drop into Teleperformance.DataIngestion.FunctionApp project root
+  changes/database/     -> run SQL on DB (new SP)
+
+IMPORTANT: Deploy the new SP before SharePoint Landing Layer smoke tests.
+
+--------------------------------------------------------------------------------
+API
+--------------------------------------------------------------------------------
+
+1) Teleperformance.DataIngestion.DataAccess\Services\v1.0\FileLoadingProcessConfigurationService.cs
+   - GetProcessListToLandingLayer .............. edited lines 308-314
+       Change: SharePoint case now sets FileExistInSharePointLocation (was wrongly FileExistInBlob)
+   - checkSharePointLandingLayerFileUploadedStatus  NEW method lines 1094-1103
+   - GetSharePointFileLocationList ............. edited lines 1120-1125
+       Change: removed checkFileUploadedStatus gate (folder browse is source of truth)
+   - FileExistInSharePointLocation ............. edited line 1147
+       Change: uses checkSharePointLandingLayerFileUploadedStatus instead of shared check
+
+2) Teleperformance.DataIngestion.DataAccess\Repository\v1.0\FileLoadingProcessConfigurationRepository.cs
+   - checkSharePointLandingFileStatus .......... NEW method lines 109-122
+       Calls: sel_checkSharePointLandingLayerUploadedFileStatus
+
+3) Teleperformance.DataIngestion.DataAccess\Interfaces\v1.0\IFileLoadingProcessConfigurationRepository.cs
+   - checkSharePointLandingFileStatus .......... NEW interface member line 15
+
+4) Teleperformance.DataIngestion.DataAccess\Services\v4.0\FileProcessServiceV4.cs
+   - ProcessExcelFile .......................... edited line 124
+       Change: UpdateFlpProcessStatus uses UploadedFileId (not FlpConfigurationId)
+   - ProcessCsvFile ............................ edited line 446
+       Change: same UploadedFileId fix
+   - ProcessTxtFile ............................ edited line 762
+       Change: same UploadedFileId fix
+   - UpdateProcessStatus ....................... edited lines 1081-1087
+       Change: SharePoint-only unlock when Databricks job is not SUCCESS
+
+5) Teleperformance.DataIngestion.DataAccess\Services\v3.0\FileProcessService.cs
+   - ProcessExcelFile .......................... edited line 118
+       Change: UpdateFlpProcessStatus uses UploadedFileId (not FlpConfigurationId)
+   - ProcessCsvFile ............................ edited line 453
+       Change: same UploadedFileId fix
+   - ProcessTxtFile ............................ edited line 770
+       Change: same UploadedFileId fix
+
+6) Teleperformance.DataIngestion.DataAccess\Services\v4.1\FileProcessServiceV4_1.cs
+   - ProcessLandingLayerFile ................... NEW SharePoint branch lines 361-386
+       Calls: ProcessFileFromSharePointToLandingLayer
+
+7) Teleperformance.DataIngestion.DataAccess\Services\v4.1\LandingLayerService.cs
+   - LandingLayerService ctor .................. edited lines 48-66
+       Change: inject ISharePointPluginService + IFileLoadingProcessConfigurationRepository
+   - ProcessFileFromSharePointToLandingLayer ... NEW method lines 1351-1545
+   - ResolveSharePointProcessedFolderPath ...... NEW helper lines 1547-1558
+
+8) Teleperformance.DataIngestion.DataAccess\Interfaces\v4.1\ILandingLayerService.cs
+   - ProcessFileFromSharePointToLandingLayer ... NEW interface member line 16
+
+9) Teleperformance.DataIngestion.Models\DTOs\v1.0\FileLoadingConfigurationProcess\FileLoadingConfigurationResponseDto.cs
+   - FileExistInSharePointLocation ............. NEW property line 25
+
+10) Teleperformance.DataIngestion.Models\Models\v4.1\LandingLayerValidationFile.cs
+   - SharePointFilePath ........................ NEW property line 26
+
+--------------------------------------------------------------------------------
+FUNCTION APP
+--------------------------------------------------------------------------------
+
+1) FileLoadingProcessApp.cs
+   - FunctionAppToMoveSharePointToLandingLayer . NEW function lines 68-80
+       Calls: CallFlpProcessToLandingLayer(ProcessTypeEnum.SharePointWorkspace) // 6
+
+2) Services\APIHelper.cs
+   - CallFlpProcessToLandingLayer .............. edited lines 257-265
+       Change: else if (flp.FileExistInSharePointLocation) sets SourceLocationTypeId = SharePoint (4)
+
+3) Models\FlpConfigurationResponse.cs
+   - FileExistInSharePointLocation ............. NEW property line 64
+
+--------------------------------------------------------------------------------
+DATABASE (also included for production)
+--------------------------------------------------------------------------------
+
+1) sel_checkSharePointLandingLayerUploadedFileStatus.sql
+   - sel_checkSharePointLandingLayerUploadedFileStatus  NEW procedure (entire file)
+       Locks while di_uploadedFile.flpProcessStatusId = 1 AND processTypeId = 6
