@@ -1,0 +1,99 @@
+WORKSPACE CONNECT — INTERNAL-FIRST VIDEO BRIEF
+Product: TP Data Ingestion → Workspace Connect
+Focus: INTERNAL SharePoint (daily path). External = 1 short mention only.
+Visual style: colorful 3D motion graphics. Use the attached PNGs as primary visuals.
+Palette: teal #038387 | cyan #37c6d0 | indigo #2e44b1 | navy #0b1220 | success #22c55e
+
+ATTACHED IMAGE MAP (use these exact scenes)
+1) wc-hero-hub.png → opening hero
+2) wc-workflow-internal.png → full journey diagram
+3) wc-internal-type.png → choose Internal (highlight this)
+4) wc-internal-form-steps.png → Identity + Access + Site + Verify form
+5) wc-workspace-browse.png → browse libraries/files
+6) wc-icon-set-internal.png → icon beats between steps
+
+============================================================
+SCENE 1 — HERO (show wc-hero-hub.png)
+============================================================
+Title: Workspace Connect
+Line: Register Internal SharePoint. Verify. Browse. Ingest.
+Orbit icons: SharePoint, folder, shield, cloud, database.
+
+============================================================
+SCENE 2 — JOURNEY (show wc-workflow-internal.png)
+============================================================
+Animate light through nodes:
+HOME → REGISTER → VERIFY → ACTIVE → BROWSE
+Say: This is the Internal path most teams use every day.
+
+============================================================
+SCENE 3 — HOME ACTIONS
+============================================================
+Spotlight button: Register Tenants
+Then SharePoint connector card → Manage profiles
+Google Drive = Coming soon (1 second only)
+
+============================================================
+SCENE 4 — PICK INTERNAL (show wc-internal-type.png)
+============================================================
+BIG focus: Internal = platform credentials, office building icon
+Diagram: App → Platform Key → SharePoint
+External: tiny fade note “rarely used / advanced only” — do not teach Entra fields.
+
+============================================================
+SCENE 5 — INTERNAL FORM STEPS (show wc-internal-form-steps.png)
+============================================================
+Teach ONLY these Internal steps, one beat each:
+
+STEP A — Identity
+  Fields: Tenant name + Owner
+  Tip: Name it so your team recognizes the site.
+
+STEP B — Access scope
+  Region = REQUIRED (glow)
+  Sub-Region / Client / Security Group = optional
+  Diagram: Region → Sub-Region → Client → Security Group
+
+STEP C — Site URL
+  Paste full SharePoint link
+  Magic extract: Host + Site + Library (+ optional Folder)
+  Example shape: https://contoso.sharepoint.com/sites/MyTeamSite
+  No Entra secret screens.
+
+STEP D — Test connection (Internal pipeline only)
+  Chevrons: Resolve Site → Read Libraries
+  Success chips: Host | Site title | Libraries
+  Green badge: Connection verified
+  If fail: fix URL/permissions, re-test (or inactive — brief)
+
+STEP E — Review + Register
+  Confirm tiles: Tenant, Owner, Internal, Site, Host, Library, Region
+  CTA: Register connector → success toast → Browse workspace now
+
+============================================================
+SCENE 6 — TENANT LIST
+============================================================
+Show card: Edit | Use | Delete
+Spotlight Use → opens workspace
+
+============================================================
+SCENE 7 — WORKSPACE (show wc-workspace-browse.png)
+============================================================
+Mode = Internal selected
+Pick Tenant → Site → Connect
+Browse library folders + files (CSV/XLSX/PDF)
+Toolbar flashes: Refresh, Generate cURL, Disconnect
+
+============================================================
+SCENE 8 — CLOSE (show wc-icon-set-internal.png)
+============================================================
+Four icons only: Register → Verify → Browse → Ingest
+Line: Internal SharePoint to Data Ingestion — connected fast.
+Help lives on Workspace Connect home.
+
+NARRATION RULES
+- Coach voice, one action per sentence
+- Say button names: Register Tenants, Test connection, Use, Connect
+- 90% Internal. External = one sentence max
+- Prefer attached images over text slides
+- Runtime ~4–5 minutes

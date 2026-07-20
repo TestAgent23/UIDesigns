@@ -1,0 +1,520 @@
+================================================================================
+WORKSPACE CONNECT — DETAILED SOURCE (NotebookLM)
+Module: Workspace Connect
+Product: TP Data Ingestion (Teleperformance)
+Purpose of this document: Full instructional source for Help content and
+NotebookLM Video Overview / Audio Overview / study guides.
+Primary audience: Operations users who register Internal SharePoint sites
+for ingestion.
+Video runtime target when using Video Overview: 4–5 minutes (summarize; do not
+try to narrate every paragraph — prioritize the Internal happy path).
+Focus: INTERNAL SharePoint only.
+================================================================================
+
+
+--------------------------------------------------------------------------------
+1. PRODUCT DEFINITION
+--------------------------------------------------------------------------------
+Workspace Connect is the cloud-connector area inside TP Data Ingestion.
+
+It lets users:
+  A) Register Internal SharePoint sites as connector profiles (called tenants /
+     applications / connector profiles in the UI).
+  B) Validate that the platform can reach those sites (Test connection).
+  C) Browse document libraries and files in SharePoint Workspace.
+  D) Support downstream data ingestion and streaming API consumers.
+
+Home page lead copy (product meaning):
+  “Register cloud connectors, validate access, and browse workspace content
+   for downstream data ingestion.”
+
+What exists today:
+  • SharePoint — fully available (register, manage, browse).
+  • Google Drive — shown as Coming soon (do not teach setup).
+
+Security positioning on the home hero:
+  Cloud ingestion | Enterprise secure | Live sync
+
+What INTERNAL means:
+  • Platform-managed SharePoint sites.
+  • Uses platform credentials (host often auto-filled from environment).
+  • Connectivity check resolves the site and reads document libraries.
+  • This is the full path taught in this document and in the instruction video.
+
+
+--------------------------------------------------------------------------------
+2. INFORMATION ARCHITECTURE (SCREENS)
+--------------------------------------------------------------------------------
+Workspace Connect has these main views:
+
+2.1 HOME
+  • Brand title: Workspace Connect
+  • Primary action: Register Tenants
+  • Connector cards: SharePoint (live), Google Drive (coming soon)
+  • Help section: guides / tutorials / instruction video placeholder area
+
+2.2 SHAREPOINT CONNECTORS (Tenants list)
+  • Manage all registered SharePoint connector profiles
+  • Register new Internal tenant
+  • Edit / Use / Delete
+  • Search and filters (type, draft, access scope / hierarchy)
+  • Cards view or List view
+  • Summary: total tenants, Internal count, Draft count
+  • Chart: Registrations by month
+
+2.3 REGISTRATION FORM / GUIDED REGISTRATION
+  • Select Internal
+  • Collect identity, access scope, site URL, optional notes
+  • Run Test connection before save
+  • Register active, register inactive, or save as draft
+
+2.4 SHAREPOINT WORKSPACE
+  • Connect using a registered Internal tenant + site
+  • Browse libraries and folders
+  • Preview / download files
+  • Generate streaming API cURL guide
+
+
+--------------------------------------------------------------------------------
+3. MASTER WORKFLOW (DIAGRAM — USE IN VIDEO)
+--------------------------------------------------------------------------------
+Draw this as one glowing horizontal flowchart:
+
+  [1 HOME]
+      ↓
+  [2 REGISTER TENANTS]
+      ↓
+  [3 SELECT INTERNAL]
+      ↓
+  [4 IDENTITY: Tenant name + Owner]
+      ↓
+  [5 ACCESS: Region (required) + optional scope]
+      ↓
+  [6 SITE: Paste SharePoint URL → auto extract]
+      ↓
+  [7 TEST CONNECTION: Site → Libraries → Verified]
+      ↓
+  [8 REVIEW → REGISTER CONNECTOR]
+      ↓
+  [9 TENANTS LIST → USE]
+      ↓
+  [10 WORKSPACE: Connect → Library → Browse files]
+      ↓
+  [11 INGEST / STREAMING API]
+
+Narration core:
+  “Register, verify, browse, ingest — using Internal SharePoint.”
+
+
+--------------------------------------------------------------------------------
+4. HOME SCREEN — WHAT TO CLICK
+--------------------------------------------------------------------------------
+Step-by-step for a new user landing on Workspace Connect:
+
+1. Read the title Workspace Connect and the short lead.
+2. Click the primary button: Register Tenants
+   (Alternative path: open the SharePoint connector card → Manage profiles,
+    then click Register on the tenants page.)
+3. Ignore Google Drive for now (Coming soon).
+4. Help section at the bottom is where this instruction video / guides live.
+
+UI phrases to say exactly:
+  • Register Tenants
+  • SharePoint
+  • Manage profiles
+  • Coming soon
+
+
+--------------------------------------------------------------------------------
+5. REGISTER AN INTERNAL SHAREPOINT CONNECTOR (FULL DETAIL)
+--------------------------------------------------------------------------------
+This is the main teaching section. Go slow in Video Overview for these steps.
+
+--------------------------------
+5.1 STEP — SELECT INTERNAL
+--------------------------------
+Screen intent: Choose Internal connector type.
+
+Internal means:
+  • Platform-managed SharePoint site
+  • Platform credentials
+  • Host may come from environment configuration
+
+Action for trainees:
+  Select Internal.
+
+Coach line:
+  “Internal sites use platform credentials. Select Internal to continue.”
+
+--------------------------------
+5.2 STEP — IDENTITY (WHO OWNS THIS CONNECTOR)
+--------------------------------
+Fields:
+  • Tenant name (required)
+      Placeholder example: Contoso Marketing SharePoint
+      Tip: Start with a clear name — this is how the team recognizes the
+      connector later in Workspace Connect.
+  • Owner (required)
+      Full name of the person responsible.
+      May be pre-filled if the user is signed in.
+
+Validation messages users may see:
+  • Enter a tenant name before continuing.
+  • Enter the site owner before continuing.
+
+--------------------------------
+5.3 STEP — ACCESS CONFIGURATION (WHERE IS IT AVAILABLE)
+--------------------------------
+Section title: Access configuration
+Hint: Region is required. Other fields default to All when left empty.
+
+Fields:
+  • Region — REQUIRED
+  • Sub-Region — optional (can be All)
+  • Client — optional (can be All)
+  • Security Group — optional
+      Search hint: Minimum of 5 characters to start searching
+      Can clear selection
+
+Why it matters:
+  The platform uses this hierarchy so the connector is scoped to the correct
+  region / client / security group in the organization.
+
+Diagram to show:
+  REGION (required)
+     ↓
+  SUB-REGION (optional)
+     ↓
+  CLIENT (optional)
+     ↓
+  SECURITY GROUP (optional)
+
+Validation:
+  • Select a region before continuing.
+
+--------------------------------
+5.4 STEP — SITE (WHICH SHAREPOINT SITE)
+--------------------------------
+Question on screen: “Which SharePoint site do you want to connect?”
+Instruction: Paste a full SharePoint URL or site path. The system extracts
+host, site, library, and folder.
+
+Field:
+  • SharePoint URL
+    Placeholder: https://contoso.sharepoint.com/sites/MyTeamSite
+    Hint: Paste a site link, then review the extracted details.
+
+What happens after paste:
+  1. Status: Reading your link…
+  2. Status: Site details extracted
+  3. Review panel shows extracted pieces:
+       - Host (example: contoso.sharepoint.com)
+       - Site path (example: sites/MyTeamSite)
+       - Library (example: Documents) — selectable after test if needed
+       - Folder path (optional)
+
+User should confirm extracted details look correct before continuing.
+
+If URL cannot be parsed:
+  Message like: Could not read that SharePoint URL. Paste a full link or a
+  path such as sites/MyTeamSite.
+
+Internal host note:
+  Host may be auto-filled from environment configuration.
+  Users still paste a real site link so site path is correct.
+
+--------------------------------
+5.5 STEP — VERIFY CONNECTIVITY (CRITICAL)
+--------------------------------
+Screen: Verify connectivity
+Idle subtitle: Run a quick connectivity test to confirm the site is reachable.
+Button: Test connection (later: Re-test connection)
+
+Internal verification phases (show as chevron pipeline):
+  1) Resolving SharePoint site
+  2) Reading document libraries
+
+Success state:
+  • Subtitle: Site is reachable. You can register this connector now.
+  • Badge: Connection verified / Reachable
+  • Glimpse chips may show: Host resolved, Site title, Libraries, Files sampled
+  • Coach: Great news — the site responded. Pick a library if needed, then
+    review and register.
+  • Optional: Choose which document library this connector should use by default.
+
+Failure state:
+  • Subtitle: Connection failed. You can still register as inactive and re-test
+    later.
+  • Tips: Check permissions and site URL.
+  • Actions: Re-test connection OR Register as inactive
+
+Rules before register:
+  • Run Test connection for each site before registering when possible.
+  • If verification failed, inactive registration is allowed so work is not lost.
+
+--------------------------------
+5.6 STEP — REVIEW AND REGISTER
+--------------------------------
+Screen: Ready to register
+If verified: Your connector passed verification and will be registered as active.
+If not: Your connector will be registered as inactive until verification succeeds.
+
+Review cards to confirm:
+  • Tenant
+  • Owner
+  • Type (Internal)
+  • Site
+  • Host
+  • Library
+  • Folder (if any)
+  • Region
+  • Notes / Co-owner (if filled)
+
+Primary CTA:
+  • Register connector  (active path)
+Alternate CTAs:
+  • Register as inactive
+  • Cancel
+
+Success messages:
+  • “{name}” is registered and active.
+  • “{name}” registered as inactive. Fix connectivity to activate.
+
+After success:
+  • Browse workspace now (recommended next action)
+
+
+--------------------------------------------------------------------------------
+6. OPTIONAL FIELDS USERS MAY SEE ON FULL FORM
+--------------------------------------------------------------------------------
+Not every field is needed for the Internal happy path video, but the detailed
+Help article should mention:
+  • Co-owner
+  • Notes (optional context)
+  • Save as draft (work in progress without full activation)
+  • Library selection after libraries are listed by Test connection
+  • Folder path (optional)
+
+Draft meaning:
+  Tenant saved but not fully ready / filtered under Draft on the list page.
+
+Inactive meaning:
+  Registered but connectivity has not succeeded yet; fix and edit/activate later.
+
+
+--------------------------------------------------------------------------------
+7. MANAGING TENANTS ON THE SHAREPOINT CONNECTORS PAGE
+--------------------------------------------------------------------------------
+Page title area: SharePoint
+Lead: Manage connector profiles that define how the platform reaches each
+data source.
+
+How to open:
+  Home → SharePoint card → Manage profiles
+  or after registration from the tenants list.
+
+What users can do:
+  1. Search tenants by tenant, owner, site, or host
+  2. Filter by type / Draft / access scope
+  3. Switch Cards vs List view
+  4. See summary counts and registrations-by-month chart
+  5. Per tenant actions:
+       • Edit — change details, re-test, save
+       • Use — open this tenant in SharePoint Workspace
+       • Delete — with confirm prompt
+
+Empty state:
+  No tenants yet → Register a tenant
+
+No match state:
+  Adjust search, status, type, or access scope filter → Clear filters
+
+Columns / labels commonly shown:
+  Owner, Co-owner, Sites, Tenant ID, Status, Type, Primary site, Updated,
+  Streaming API ID (where applicable)
+
+
+--------------------------------------------------------------------------------
+8. SHAREPOINT WORKSPACE — BROWSE AFTER REGISTRATION
+--------------------------------------------------------------------------------
+Purpose:
+  Connect with a registered Internal profile and browse libraries and files.
+
+Entry points:
+  • Click Use on a tenant card/row
+  • Or open SharePoint Workspace / storage settings from navigation when enabled
+  • Or Browse workspace now after successful registration
+
+--------------------------------
+8.1 INTERNAL CONNECTION PANEL
+--------------------------------
+In the configuration panel, use Internal mode.
+
+Internal panel behavior:
+  • Select Tenant (registered application)
+  • Select Site
+  • Optionally select / refresh Document library
+  • Click Connect (or Reconnect)
+
+Hints users may see:
+  • Nothing is selected until you pick a tenant (or use Use from Tenants list)
+  • No tenants registered yet. Register one on the Tenants list page first.
+  • This tenant has no sites yet. Add sites on the Tenants list page.
+
+--------------------------------
+8.2 ACCESS CONFIGURATION BEFORE BROWSE (IF PROMPTED)
+--------------------------------
+Some flows ask for access configuration first:
+  • Region required
+  • Sub-Region / Client / Security Group optional
+  • Continue to workspace
+
+Message example:
+  Set region and optional scope before browsing SharePoint sites and files.
+
+--------------------------------
+8.3 CONNECT SEQUENCE
+--------------------------------
+After Connect:
+  Loader steps conceptually: Site → Libraries → Ready
+  Hints:
+    • Linking your site and preparing the file browser…
+    • Loading document libraries from your site…
+  Success:
+    • Connected. Opening your library…
+    • Connected to {site title}.
+    • Connected to "{tenant name}".
+
+--------------------------------
+8.4 BROWSING FILES
+--------------------------------
+Once connected:
+  • Choose current document library
+  • Navigate folders (Up, Back, Forward, Library root, Refresh)
+  • Switch List view / Grid view
+  • Open files for preview when supported
+  • Download files when needed
+
+Empty folder:
+  This folder is empty — There are no files or folders here yet.
+
+For ingestion file-pick scenarios that expect spreadsheets:
+  Prefer folders containing CSV or XLSX files.
+
+Toolbar useful actions:
+  • Refresh folder
+  • Disconnect
+  • Reset (clear connection/selection/browse state)
+  • Generate cURL (streaming API helper)
+
+
+--------------------------------------------------------------------------------
+9. STREAMING API / cURL (SHORT BUT COMPLETE)
+--------------------------------------------------------------------------------
+After a connector profile exists, integrators can use the streaming API.
+
+Generate cURL opens an integration guide with three steps:
+  Step 1 — Get access token
+            Use registered application ID and API secret.
+            Copy accessToken from the response.
+  Step 2 — Browse folder (optional)
+            Call with Bearer token from step 1.
+  Step 3 — Download or stream file
+            Send JSON body with filePath.
+            Replace YOUR_ACCESS_TOKEN and filePath.
+
+Important:
+  Site and library come from the registered connector profile.
+  Users can Copy step, Copy all, or Download .txt guide.
+
+Keep video coverage short (~20–30 seconds). Deep API docs are optional.
+
+
+--------------------------------------------------------------------------------
+10. COMMON ERRORS AND FIXES
+--------------------------------------------------------------------------------
+Problem: URL not accepted
+  Fix: Paste full https://…sharepoint.com/sites/... link
+
+Problem: Region missing
+  Fix: Select Region before continuing
+
+Problem: Test connection fails
+  Fix: Check site URL, permissions, and that Internal host/site are correct;
+       Re-test; or Register as inactive and fix later
+
+Problem: No tenants in Workspace
+  Fix: Register on Tenants list first, then Use
+
+Problem: No sites on tenant
+  Fix: Edit tenant and add at least one SharePoint site
+
+Problem: Could not open site / load libraries
+  Fix: Confirm access, reconnect, refresh libraries
+
+
+--------------------------------------------------------------------------------
+11. GLOSSARY (FOR NOTEBOOKLM Q&A)
+--------------------------------------------------------------------------------
+Workspace Connect — Module to register and browse cloud connectors for ingestion.
+Tenant / Connector profile / Application — Saved Internal SharePoint connection profile.
+Internal — Platform-credential SharePoint connector (the path taught here).
+Region hierarchy — Access scope (Region required; sub-region/client/SG optional).
+Test connection — Pre-register probe that resolves site and lists libraries.
+Active — Registered and connectivity verified.
+Inactive — Registered but connectivity not yet successful.
+Draft — Saved incomplete registration.
+SharePoint Workspace — File browser after Connect.
+Streaming API — Token + filePath based download/stream for integrators.
+Use — Action that opens a tenant into the workspace flow.
+Register Tenants — Home CTA to start registration.
+
+
+--------------------------------------------------------------------------------
+12. SUGGESTED 4–5 MINUTE VIDEO OUTLINE (FROM THIS DETAILED SOURCE)
+--------------------------------------------------------------------------------
+0:00–0:20  Hero: What is Workspace Connect
+0:20–0:45  Workflow map (Register → Verify → Browse → Ingest)
+0:45–1:05  Home: click Register Tenants; SharePoint live
+1:05–1:20  Select Internal
+1:20–2:40  Form: Identity → Region → Paste URL → extract details
+2:40–3:20  Test connection → success → Register connector
+3:20–3:45  Tenants list → Use
+3:45–4:30  Workspace: Tenant + Site → Connect → browse files
+4:30–4:50  Optional Generate cURL flash
+4:50–5:00  Close: Help on home; four icons Register Verify Browse Ingest
+
+HARD RULES FOR VIDEO GENERATION
+  • 4–5 minutes maximum
+  • INTERNAL SharePoint only
+  • Colorful 3D icons + diagrams + animated form steps
+  • Palette: teal #038387 | cyan #37c6d0 | indigo #2e44b1 | navy #0b1220
+  • Say exact button names
+  • One action per sentence
+  • No dense text-only slides
+
+
+--------------------------------------------------------------------------------
+13. CUSTOM PROMPT SNIPPET (OPTIONAL — PASTE IN VIDEO OVERVIEW)
+--------------------------------------------------------------------------------
+Create a colorful 4–5 minute instruction video from this detailed source.
+Summarize into the outline in section 12.
+Teach INTERNAL SharePoint registration and browsing only.
+Show workflow diagram and form steps visually.
+Teach button path: Register Tenants → Internal → Tenant/Owner → Region →
+paste SharePoint URL → Test connection → Register connector → Use → Connect →
+browse files. Visual-first. Energetic coach voice.
+
+
+--------------------------------------------------------------------------------
+14. CLOSING SUMMARY (ONE PARAGRAPH)
+--------------------------------------------------------------------------------
+Workspace Connect is where TP Data Ingestion users register Internal SharePoint
+tenants, set Region access scope, paste a SharePoint site URL, run Test
+connection, register the connector, then Use it in SharePoint Workspace to
+Connect and browse libraries and files for ingestion—with optional streaming
+API cURL for integrators. Help content and the instruction video live on the
+Workspace Connect home Help section.
+================================================================================
+END OF DETAILED SOURCE
+================================================================================
